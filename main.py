@@ -3,10 +3,6 @@
 import numpy as np
 from scipy.misc import logsumexp
 
-n_states = 15
-n_actions = 4
-batch_size = 10
-transitions = np.random.random([n_states, n_actions, n_states])
 
 def softmax(array, axis=None):
     denominator = logsumexp(array, axis=axis)
@@ -14,39 +10,93 @@ def softmax(array, axis=None):
         denominator = np.expand_dims(denominator, axis)
     return np.exp(array - denominator)
 
-def next_state_distribution(actions, states, stochastic_actions=False):
-    """
-    :returns a distribution over next states for the given actions.
-    """
-    assert transitions.shape == (n_states, n_actions, n_states)
-    assert states.shape == batch_size
-    if stochastic_actions:
-        assert actions.shape == batch_size, n_actions
-        return np.dot(actions, transitions)
-    else:
-        return transitions[states, actions]
+
+GAMMA = .95
+ALPHA = .99
+N_STATES = 15
+N_ACTIONS = 2
+TRANSITIONS = np.vstack([
+    np.arra
+])
+# TRANSITIONS = softmax(np.random.random([N_ACTIONS, N_STATES, N_STATES]),
+#                       axis=-1)
+P = [(N_STATES - 2) / N_STATES, 2 / N_STATES]
+REWARDS = np.random.choice(2, N_STATES, p=P)
+EPISODES = 200
+MAX_TIMESTEPS = 100
+
 
 def step(actions, states):
-    return np.array(list(map(
-        np.random.choice, next_state_distribution(actions, states)
-        )))
+    n_batch, = actions.shape
+    assert states.shape == (n_batch,)
+
+    next_state_distribution = TRANSITIONS[actions, states]
+    assert next_state_distribution.shape == (n_batch, N_STATES)
+
+    next_states = np.array([np.random.choice(N_STATES, p=row)
+                            for row in next_state_distribution])
+    assert next_states.shape == (n_batch,)
+
+    rewards = REWARDS[next_states]
+    assert rewards.shape == next_states.shape
+
+    return next_states, rewards
+
 
 def act(states, value_matrix):
-    """
-    :returns a distribution over next states for the given actions.
-    """
-    return np.argmax(
-        np.dot(np.dot(actions, transitions[states, :, :]), value_matrix),
-        axis=-1
-            )
+    n_batch, = states.shape
+    assert TRANSITIONS.shape == (N_ACTIONS, N_STATES, N_STATES)
+    assert value_matrix.shape == (n_batch, N_STATES)
 
-def interpolate(a, b):
-    return alpha * a + (1 - alpha) * b
+    meshgrid = np.meshgrid(range(N_ACTIONS), states)
+    assert len(meshgrid) == 2
+    for grid in meshgrid:
+        assert grid.shape == (n_batch, N_ACTIONS)
 
-def update(value_matrix, rewards, states, next_states):
-    return interpolate(
-            value_matrix,
-            rewards[states] + gamma * np.dot(value_matrix, next_states)
-            )
+    next_states = TRANSITIONS[meshgrid]
+    assert next_states.shape == (n_batch, N_ACTIONS, N_STATES)
 
+    transposed_value_matrix = np.expand_dims(value_matrix, 2)
+    assert transposed_value_matrix.shape == (n_batch, N_STATES, 1)
+
+    next_values = np.matmul(next_states, transposed_value_matrix)
+    assert next_values.shape == (n_batch, N_ACTIONS, 1)
+
+    actions = np.argmax(next_values, axis=1).flatten()
+    assert actions.shape == (n_batch,)
+    return actions
+
+
+def update(value_matrix, states, next_states):
+    n_batch, = states.shape
+    assert value_matrix.shape == (n_batch, N_STATES)
+    assert next_states.shape == (n_batch,)
+
+    indexes = np.arange(n_batch), next_states
+
+    rewards = REWARDS[states]
+    assert rewards.shape == states.shape
+
+    next_values = value_matrix[indexes]
+    assert next_values.shape == states.shape
+
+    value_matrix *= ALPHA
+    value_matrix[indexes] += (1 - ALPHA) * (rewards + next_values)
+    return value_matrix
+
+
+if __name__ == '__main__':
+    N_BATCH = 10
+    value_matrix = np.zeros((N_BATCH, N_STATES))
+    states = np.random.choice(N_STATES, N_BATCH)
+    for _ in range(EPISODES):
+        cum_reward = np.zeros(N_BATCH)
+        for _ in range(MAX_TIMESTEPS):
+            actions = act(states, value_matrix)
+            next_states, reward = step(actions, states)
+            cum_reward += reward
+            value_matrix = update(value_matrix, states, next_states)
+            print(value_matrix, REWARDS)
+            states = next_states[next_states != None]
+        print(cum_reward.mean())
 

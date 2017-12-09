@@ -52,14 +52,12 @@ for i in range(agent.sim.n_batch):
 
 
 def updatefig(_):
-    global pos, states, next_states, value_matrix, step_size
+    global pos, states, next_states, step_size, agent
     if np.allclose(pos, next_states):
-        actions = agent.act(states, value_matrix)
-        next_states, reward = agent.sim.step(actions, states)
-        value_matrix = agent.update(value_matrix, states, next_states)
+        actions, states, next_states, reward = agent.step(states)
         step_size = (next_states - states) / 20
         states = next_states
-        im.set_array(value_matrix)
+        im.set_array(agent.value_matrix)
     pos += step_size
     for i, j in enumerate(pos):
         circles[i].center = (x(j), i)

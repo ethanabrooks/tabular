@@ -2,7 +2,6 @@
 
 import numpy as np
 from scipy.misc import logsumexp
-from scipy.ndimage import gaussian_filter
 
 
 def softmax(array, axis=None):
@@ -37,11 +36,11 @@ class Agent:
         meshgrid = np.meshgrid(range(self.sim.n_actions), states)
         assert len(meshgrid) == 2
         for grid in meshgrid:
-            assert grid.shape == (n_batch, self.sim.n_actions)
+            assert np.shape(grid) == (n_batch, self.sim.n_actions)
 
         next_states = self.sim.transitions[meshgrid]
         assert next_states.shape == (
-        n_batch, self.sim.n_actions, self.sim.n_states)
+            n_batch, self.sim.n_actions, self.sim.n_states)
 
         transposed_value_matrix = np.expand_dims(value_matrix, 2)
         assert transposed_value_matrix.shape == (n_batch, self.sim.n_states, 1)
@@ -69,6 +68,12 @@ class Agent:
             rewards + next_values)
         return value_matrix
 
+    def step(self, states):
+        actions = self.act(states, self.value_matrix)
+        next_states, reward = self.sim.step(actions, states)
+        self.value_matrix = self.update(self.value_matrix, states, next_states)
+        return actions, states, next_states, reward
+
 
 class Sim:
     def __init__(self, n_states, n_actions, n_batch, transitions, rewards):
@@ -93,23 +98,3 @@ class Sim:
         assert rewards.shape == next_states.shape
 
         return next_states, rewards
-
-
-if __name__ == '__main__':
-    n_states = n_batch = 4
-    rewards = np.zeros((n_batch, n_states))
-    rewards[range(n_batch), np.random.randint(n_states, size=n_batch)] = 1
-    transitions = np.stack([gaussian_filter(
-        np.eye(n_states)[:, np.roll(np.arange(n_states), shift)], .5)
-        for shift in [-1, 1]])  # shifted and blurred I matrices
-    sim = Sim(n_states=n_states,
-              n_actions=2,
-              transitions=transitions,
-              rewards=rewards)
-
-    for _ in range(sim.episodes):
-        for _ in range(sim.max_timesteps):
-            actions = sim.act(sim.states, sim.value_matrix)
-            next_states, reward = sim.step(actions, sim.states)
-            value_matrix = sim.update(sim.value_matrix, sim.states, next_states)
-            sim.states = next_states

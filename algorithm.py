@@ -12,89 +12,98 @@ def softmax(array, axis=None):
     return np.exp(array - denominator)
 
 
-GAMMA = .95
-ALPHA = .9
-N_STATES = 4
-N_BATCH = 4
-N_ACTIONS = 2
-TRANSITIONS = np.stack([gaussian_filter(
-    np.eye(N_STATES)[:, np.roll(np.arange(N_STATES), shift)], .5)
-    for shift in [-1, 1]])  # shifted and blurred I matrices
-REWARDS = np.zeros((N_BATCH, N_STATES))
-REWARDS[range(N_BATCH), np.random.randint(N_STATES, size=N_BATCH)] = 1
-EPISODES = 200
-MAX_TIMESTEPS = 100
+class Sim:
+    def __init__(self, gamma, alpha, n_states, n_batch, n_actions,
+                 transitions, rewards, episodes, max_timesteps):
+        self.gamma = gamma
+        self.alpha = alpha
+        self.n_states = n_states
+        self.n_batch = n_batch
+        self.n_actions = n_actions
+        self.transitions = transitions
+        self.rewards = rewards
+        self.episodes = episodes
+        self.max_timesteps = max_timesteps
+        self.states = np.random.choice(n_states, n_batch)
+        self.value_matrix = np.zeros((n_batch, n_states))
 
+    def step(self, actions, states):
+        n_batch, = actions.shape
+        assert states.shape == (n_batch,)
 
-def step(actions, states):
-    n_batch, = actions.shape
-    assert states.shape == (n_batch,)
+        next_state_distribution = self.transitions[actions, states]
+        assert next_state_distribution.shape == (n_batch, self.n_states)
 
-    next_state_distribution = TRANSITIONS[actions, states]
-    assert next_state_distribution.shape == (n_batch, N_STATES)
+        next_states = np.array([np.random.choice(self.n_states, p=row)
+                                for row in next_state_distribution])
+        assert next_states.shape == (n_batch,)
 
-    next_states = np.array([np.random.choice(N_STATES, p=row)
-                            for row in next_state_distribution])
-    assert next_states.shape == (n_batch,)
+        rewards = self.rewards[range(self.n_batch), next_states]
+        assert rewards.shape == next_states.shape
 
-    rewards = REWARDS[range(N_BATCH), next_states]
-    assert rewards.shape == next_states.shape
+        return next_states, rewards
 
-    return next_states, rewards
+    def act(self, states, value_matrix):
+        n_batch, = states.shape
+        assert self.transitions.shape == (self.n_actions, self.n_states, self.n_states), \
+            self.transitions.shape
+        assert value_matrix.shape == (n_batch, self.n_states)
 
+        meshgrid = np.meshgrid(range(self.n_actions), states)
+        assert len(meshgrid) == 2
+        for grid in meshgrid:
+            assert grid.shape == (n_batch, self.n_actions)
 
-def act(states, value_matrix):
-    n_batch, = states.shape
-    assert TRANSITIONS.shape == (N_ACTIONS, N_STATES, N_STATES),\
-        TRANSITIONS.shape
-    assert value_matrix.shape == (n_batch, N_STATES)
+        next_states = self.transitions[meshgrid]
+        assert next_states.shape == (n_batch, self.n_actions, self.n_states)
 
-    meshgrid = np.meshgrid(range(N_ACTIONS), states)
-    assert len(meshgrid) == 2
-    for grid in meshgrid:
-        assert grid.shape == (n_batch, N_ACTIONS)
+        transposed_value_matrix = np.expand_dims(value_matrix, 2)
+        assert transposed_value_matrix.shape == (n_batch, self.n_states, 1)
 
-    next_states = TRANSITIONS[meshgrid]
-    assert next_states.shape == (n_batch, N_ACTIONS, N_STATES)
+        next_values = np.matmul(next_states, transposed_value_matrix)
+        assert next_values.shape == (n_batch, self.n_actions, 1)
 
-    transposed_value_matrix = np.expand_dims(value_matrix, 2)
-    assert transposed_value_matrix.shape == (n_batch, N_STATES, 1)
+        actions = np.argmax(next_values, axis=1).flatten()
+        assert actions.shape == (n_batch,)
+        return actions
 
-    next_values = np.matmul(next_states, transposed_value_matrix)
-    assert next_values.shape == (n_batch, N_ACTIONS, 1)
+    def update(self, value_matrix, states, next_states):
+        n_batch, = states.shape
+        assert value_matrix.shape == (n_batch, self.n_states)
+        assert next_states.shape == (n_batch,)
 
-    actions = np.argmax(next_values, axis=1).flatten()
-    assert actions.shape == (n_batch,)
-    return actions
+        rewards = self.rewards[range(self.n_batch), states]
+        assert rewards.shape == states.shape
 
+        next_values = value_matrix[range(n_batch), next_states]
+        assert next_values.shape == states.shape
 
-def update(value_matrix, states, next_states):
-    n_batch, = states.shape
-    assert value_matrix.shape == (n_batch, N_STATES)
-    assert next_states.shape == (n_batch,)
-
-    rewards = REWARDS[range(N_BATCH), states]
-    assert rewards.shape == states.shape
-
-    next_values = value_matrix[range(n_batch), next_states]
-    assert next_values.shape == states.shape
-
-    value_matrix *= ALPHA
-    value_matrix[range(n_batch), states] += (1 - ALPHA) * (rewards + next_values)
-    return value_matrix
+        value_matrix *= self.alpha
+        value_matrix[range(n_batch), states] += (1 - self.alpha) * (
+        rewards + next_values)
+        return value_matrix
 
 
 if __name__ == '__main__':
-    value_matrix = np.zeros((N_BATCH, N_STATES))
-    states = np.random.choice(N_STATES, N_BATCH)
-    for _ in range(EPISODES):
-        cum_reward = np.zeros(N_BATCH)
-        for _ in range(MAX_TIMESTEPS):
-            actions = act(states, value_matrix)
-            next_states, reward = step(actions, states)
-            cum_reward += reward
-            value_matrix = update(value_matrix, states, next_states)
-            print(value_matrix, REWARDS)
-            states = next_states[next_states != None]
-        print(cum_reward.mean())
+    n_states = n_batch = 4
+    rewards = np.zeros((n_batch, n_states))
+    rewards[range(n_batch), np.random.randint(n_states, size=n_batch)] = 1
+    transitions = np.stack([gaussian_filter(
+        np.eye(n_states)[:, np.roll(np.arange(n_states), shift)], .5)
+        for shift in [-1, 1]])  # shifted and blurred I matrices
+    sim = Sim(gamma=.95,
+              alpha=.9,
+              n_states=n_states,
+              n_batch=n_batch,
+              n_actions=2,
+              transitions=transitions,
+              rewards=rewards,
+              episodes=200,
+              max_timesteps=100)
 
+    for _ in range(sim.episodes):
+        for _ in range(sim.max_timesteps):
+            actions = sim.act(sim.states, sim.value_matrix)
+            next_states, reward = sim.step(actions, sim.states)
+            value_matrix = sim.update(sim.value_matrix, sim.states, next_states)
+            sim.states = next_states

@@ -15,7 +15,7 @@ def softmax(array, axis=None):
 GAMMA = .95
 ALPHA = .9
 N_STATES = 4
-N_BATCH = 4
+N_BATCH = 2
 N_ACTIONS = 2
 TRANSITIONS = np.stack([gaussian_filter(
     np.eye(N_STATES)[:, np.roll(np.arange(N_STATES), shift)], .5)

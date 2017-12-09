@@ -8,14 +8,14 @@ fig = plt.figure()
 ax = plt.axes()
 
 value_matrix = np.zeros((N_BATCH, N_STATES), dtype=np.float)
-im = plt.imshow(value_matrix, vmin=0, vmax=1, animated=True)
+im = plt.imshow(value_matrix, vmin=0, vmax=1, cmap='Oranges', animated=True)
 states = np.random.choice(N_STATES, N_BATCH)
 next_states = states
 pos = states.astype(float)
 step_size = 0
 circles = []
 for i, state in enumerate(states):
-    circle = plt.Circle((state, i), radius=0.2, color='white')
+    circle = plt.Circle((state, i), radius=0.2, color='black')
     circles.append(circle)
     ax.add_patch(circle)
 
@@ -26,14 +26,14 @@ def updatefig(_):
         actions = act(states, value_matrix)
         next_states, reward = step(actions, states)
         value_matrix = update(value_matrix, states, next_states)
-        step_size = (next_states - states) / 100
+        step_size = (next_states - states) / 20
         states = next_states
         im.set_array(value_matrix)
     pos += step_size
-    for y, x in enumerate(pos):
-        circles[i].center = (x, y)
+    for i, x in enumerate(pos):
+        circles[i].center = (x, i)
     return [im] + circles
 
 
-ani = animation.FuncAnimation(fig, updatefig, interval=1, blit=True)
+ani = animation.FuncAnimation(fig, updatefig, interval=.01, blit=True)
 plt.show()

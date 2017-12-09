@@ -20,8 +20,8 @@ N_ACTIONS = 2
 TRANSITIONS = np.stack([gaussian_filter(
     np.eye(N_STATES)[:, np.roll(np.arange(N_STATES), shift)], .5)
     for shift in [-1, 1]])  # shifted and blurred I matrices
-REWARDS = np.random.choice(2, N_STATES,
-                           p=np.array([N_STATES - 2, 2]) / N_STATES)
+REWARDS = np.zeros(N_STATES)
+REWARDS[np.random.randint(N_STATES)] = 1
 EPISODES = 200
 MAX_TIMESTEPS = 100
 

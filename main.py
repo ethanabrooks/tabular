@@ -2,22 +2,36 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import animation
 from algorithm import N_BATCH, N_STATES, act, step, \
-    update
+    update, REWARDS
+
+
+def x(j):
+    return j
+
+
+def y(i):
+    return N_STATES - i - 1
+
 
 fig = plt.figure()
 ax = plt.axes()
 
 value_matrix = np.zeros((N_BATCH, N_STATES), dtype=np.float)
 im = plt.imshow(value_matrix, vmin=0, vmax=1, cmap='Oranges', animated=True)
+im.set_zorder(0)
 states = np.random.choice(N_STATES, N_BATCH)
 next_states = states
 pos = states.astype(float)
 step_size = 0
 circles = []
-for i, state in enumerate(states):
-    circle = plt.Circle((state, i), radius=0.2, color='black')
+texts = []
+for i in range(N_BATCH):
+    circle = plt.Circle((states[i], y(i)), radius=0.2, color='black', zorder=1)
     circles.append(circle)
     ax.add_patch(circle)
+    for j in range(N_STATES):
+        texts.append(ax.text(j, i, REWARDS[j], zorder=2))
+
 
 
 def updatefig(_):
@@ -30,9 +44,9 @@ def updatefig(_):
         states = next_states
         im.set_array(value_matrix)
     pos += step_size
-    for i, x in enumerate(pos):
-        circles[i].center = (x, i)
-    return [im] + circles
+    for i, j in enumerate(pos):
+        circles[i].center = (x(j), i)
+    return [im] + texts + circles
 
 
 ani = animation.FuncAnimation(fig, updatefig, interval=.01, blit=True)

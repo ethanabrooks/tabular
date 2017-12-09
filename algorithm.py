@@ -17,7 +17,7 @@ ALPHA = .99
 N_STATES = 15
 N_BATCH = 10
 N_ACTIONS = 2
-TRANSITIONS = np.vstack([gaussian_filter(
+TRANSITIONS = np.stack([gaussian_filter(
     np.eye(N_STATES)[:, np.roll(np.arange(N_STATES), shift)], .5)
     for shift in [-1, 1]])  # shifted and blurred I matrices
 REWARDS = np.random.choice(2, N_STATES,
@@ -45,7 +45,8 @@ def step(actions, states):
 
 def act(states, value_matrix):
     n_batch, = states.shape
-    assert TRANSITIONS.shape == (N_ACTIONS, N_STATES, N_STATES)
+    assert TRANSITIONS.shape == (N_ACTIONS, N_STATES, N_STATES),\
+        TRANSITIONS.shape
     assert value_matrix.shape == (n_batch, N_STATES)
 
     meshgrid = np.meshgrid(range(N_ACTIONS), states)

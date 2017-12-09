@@ -10,23 +10,30 @@ ax = plt.axes()
 value_matrix = np.zeros((N_BATCH, N_STATES), dtype=np.float)
 im = plt.imshow(value_matrix, vmin=0, vmax=1, animated=True)
 states = np.random.choice(N_STATES, N_BATCH)
+next_states = states
+pos = states.astype(float)
+step_size = 0
 circles = []
 for i, state in enumerate(states):
     circle = plt.Circle((state, i), radius=0.2, color='white')
     circles.append(circle)
     ax.add_patch(circle)
 
+
 def updatefig(_):
-    global states, value_matrix
-    actions = act(states, value_matrix)
-    next_states, reward = step(actions, states)
-    value_matrix = update(value_matrix, states, next_states)
-    states = next_states
-    im.set_array(value_matrix)
-    for i, state in enumerate(states):
-        circles[i].center = (state, i)
+    global pos, states, next_states, value_matrix, step_size
+    if np.allclose(pos, next_states):
+        actions = act(states, value_matrix)
+        next_states, reward = step(actions, states)
+        value_matrix = update(value_matrix, states, next_states)
+        step_size = (next_states - states) / 100
+        states = next_states
+        im.set_array(value_matrix)
+    pos += step_size
+    for y, x in enumerate(pos):
+        circles[i].center = (x, y)
     return [im] + circles
 
 
-ani = animation.FuncAnimation(fig, updatefig, blit=True)
+ani = animation.FuncAnimation(fig, updatefig, interval=1, blit=True)
 plt.show()

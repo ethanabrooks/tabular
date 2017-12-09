@@ -1,102 +1,58 @@
-#! /usr/bin/env python
-
+import matplotlib.pyplot as plt
 import numpy as np
-from scipy.misc import logsumexp
+
+from algorithm import N_BATCH, N_STATES, EPISODES, MAX_TIMESTEPS, act, step, \
+    update, REWARDS
+
+from matplotlib import animation
 
 
-def softmax(array, axis=None):
-    denominator = logsumexp(array, axis=axis)
-    if axis:
-        denominator = np.expand_dims(denominator, axis)
-    return np.exp(array - denominator)
+# if __name__ == '__main__':
+#     value_matrix = np.zeros((N_BATCH, N_STATES))
+#     states = np.random.choice(N_STATES, N_BATCH)
+#     for _ in range(EPISODES):
+#         for _ in range(MAX_TIMESTEPS):
+#             actions = act(states, value_matrix)
+#             next_states, reward = step(actions, states)
+#             value_matrix = update(value_matrix, states, next_states)
+#             states = next_states[next_states != None]
+
+# if __name__ == '__main__':
+#     # Just some example data (random)
+#     x = 0
+#     for _ in range(50):
+#         x += .01
+#         data[0] += .01
+#         # image.set_data(data)
+#         circle = plt.Circle((x, 0), radius=.01)
+#         plt.gca().add_patch(circle)
+#         plt.pause(.1)
+#         plt.draw()
+
+def f(x, y):
+    return np.sin(x) + np.cos(y)
 
 
-GAMMA = .95
-ALPHA = .99
-N_STATES = 15
-N_ACTIONS = 2
-TRANSITIONS = np.vstack([
-    np.arra
-])
-# TRANSITIONS = softmax(np.random.random([N_ACTIONS, N_STATES, N_STATES]),
-#                       axis=-1)
-P = [(N_STATES - 2) / N_STATES, 2 / N_STATES]
-REWARDS = np.random.choice(2, N_STATES, p=P)
-EPISODES = 200
-MAX_TIMESTEPS = 100
+fig = plt.figure()
+ax = plt.axes()
 
 
-def step(actions, states):
-    n_batch, = actions.shape
-    assert states.shape == (n_batch,)
+x = np.linspace(0, 2 * np.pi, 120)
+y = np.linspace(0, 2 * np.pi, 100).reshape(-1, 1)
 
-    next_state_distribution = TRANSITIONS[actions, states]
-    assert next_state_distribution.shape == (n_batch, N_STATES)
-
-    next_states = np.array([np.random.choice(N_STATES, p=row)
-                            for row in next_state_distribution])
-    assert next_states.shape == (n_batch,)
-
-    rewards = REWARDS[next_states]
-    assert rewards.shape == next_states.shape
-
-    return next_states, rewards
+im = plt.imshow(f(x, y), animated=True)
+circle = plt.Circle((5, 5), 0.2, color='red', )
+ax.add_patch(circle)
 
 
-def act(states, value_matrix):
-    n_batch, = states.shape
-    assert TRANSITIONS.shape == (N_ACTIONS, N_STATES, N_STATES)
-    assert value_matrix.shape == (n_batch, N_STATES)
-
-    meshgrid = np.meshgrid(range(N_ACTIONS), states)
-    assert len(meshgrid) == 2
-    for grid in meshgrid:
-        assert grid.shape == (n_batch, N_ACTIONS)
-
-    next_states = TRANSITIONS[meshgrid]
-    assert next_states.shape == (n_batch, N_ACTIONS, N_STATES)
-
-    transposed_value_matrix = np.expand_dims(value_matrix, 2)
-    assert transposed_value_matrix.shape == (n_batch, N_STATES, 1)
-
-    next_values = np.matmul(next_states, transposed_value_matrix)
-    assert next_values.shape == (n_batch, N_ACTIONS, 1)
-
-    actions = np.argmax(next_values, axis=1).flatten()
-    assert actions.shape == (n_batch,)
-    return actions
+def updatefig(i):
+    global x, y
+    x += np.pi / 15.
+    y += np.pi / 20.
+    im.set_array(f(x, y))
+    circle.center = (i, i)
+    return im, circle
 
 
-def update(value_matrix, states, next_states):
-    n_batch, = states.shape
-    assert value_matrix.shape == (n_batch, N_STATES)
-    assert next_states.shape == (n_batch,)
-
-    indexes = np.arange(n_batch), next_states
-
-    rewards = REWARDS[states]
-    assert rewards.shape == states.shape
-
-    next_values = value_matrix[indexes]
-    assert next_values.shape == states.shape
-
-    value_matrix *= ALPHA
-    value_matrix[indexes] += (1 - ALPHA) * (rewards + next_values)
-    return value_matrix
-
-
-if __name__ == '__main__':
-    N_BATCH = 10
-    value_matrix = np.zeros((N_BATCH, N_STATES))
-    states = np.random.choice(N_STATES, N_BATCH)
-    for _ in range(EPISODES):
-        cum_reward = np.zeros(N_BATCH)
-        for _ in range(MAX_TIMESTEPS):
-            actions = act(states, value_matrix)
-            next_states, reward = step(actions, states)
-            cum_reward += reward
-            value_matrix = update(value_matrix, states, next_states)
-            print(value_matrix, REWARDS)
-            states = next_states[next_states != None]
-        print(cum_reward.mean())
-
+ani = animation.FuncAnimation(fig, updatefig, interval=50, blit=True)
+plt.show()

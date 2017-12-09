@@ -20,8 +20,8 @@ N_ACTIONS = 2
 TRANSITIONS = np.stack([gaussian_filter(
     np.eye(N_STATES)[:, np.roll(np.arange(N_STATES), shift)], .5)
     for shift in [-1, 1]])  # shifted and blurred I matrices
-REWARDS = np.zeros(N_STATES)
-REWARDS[np.random.randint(N_STATES)] = 1
+REWARDS = np.zeros((N_BATCH, N_STATES))
+REWARDS[range(N_BATCH), np.random.randint(N_STATES, size=N_BATCH)] = 1
 EPISODES = 200
 MAX_TIMESTEPS = 100
 
@@ -37,7 +37,7 @@ def step(actions, states):
                             for row in next_state_distribution])
     assert next_states.shape == (n_batch,)
 
-    rewards = REWARDS[next_states]
+    rewards = REWARDS[range(N_BATCH), next_states]
     assert rewards.shape == next_states.shape
 
     return next_states, rewards
@@ -73,7 +73,7 @@ def update(value_matrix, states, next_states):
     assert value_matrix.shape == (n_batch, N_STATES)
     assert next_states.shape == (n_batch,)
 
-    rewards = REWARDS[states]
+    rewards = REWARDS[range(N_BATCH), states]
     assert rewards.shape == states.shape
 
     next_values = value_matrix[range(n_batch), next_states]

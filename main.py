@@ -30,7 +30,7 @@ for i in range(N_BATCH):
     circles.append(circle)
     ax.add_patch(circle)
     for j in range(N_STATES):
-        texts.append(ax.text(j, i, int(REWARDS[j]), zorder=2))
+        texts.append(ax.text(j, i, int(REWARDS[i, j]), zorder=2))
 
 
 def updatefig(_):

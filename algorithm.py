@@ -13,7 +13,7 @@ def softmax(array, axis=None):
 
 
 GAMMA = .95
-ALPHA = .5
+ALPHA = .9
 N_STATES = 4
 N_BATCH = 3
 N_ACTIONS = 2

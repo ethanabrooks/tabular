@@ -33,7 +33,6 @@ for i in range(N_BATCH):
         texts.append(ax.text(j, i, int(REWARDS[j]), zorder=2))
 
 
-
 def updatefig(_):
     global pos, states, next_states, value_matrix, step_size
     if np.allclose(pos, next_states):

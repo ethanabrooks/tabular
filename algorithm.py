@@ -15,7 +15,7 @@ def softmax(array, axis=None):
 GAMMA = .95
 ALPHA = .9
 N_STATES = 4
-N_BATCH = 2
+N_BATCH = 4
 N_ACTIONS = 2
 TRANSITIONS = np.stack([gaussian_filter(
     np.eye(N_STATES)[:, np.roll(np.arange(N_STATES), shift)], .5)
@@ -73,16 +73,14 @@ def update(value_matrix, states, next_states):
     assert value_matrix.shape == (n_batch, N_STATES)
     assert next_states.shape == (n_batch,)
 
-    indexes = np.arange(n_batch), next_states
-
     rewards = REWARDS[states]
     assert rewards.shape == states.shape
 
-    next_values = value_matrix[indexes]
+    next_values = value_matrix[range(n_batch), next_states]
     assert next_values.shape == states.shape
 
     value_matrix *= ALPHA
-    value_matrix[indexes] += (1 - ALPHA) * (rewards + next_values)
+    value_matrix[range(n_batch), states] += (1 - ALPHA) * (rewards + next_values)
     return value_matrix
 
 

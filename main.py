@@ -1,10 +1,11 @@
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
-import time
 from matplotlib import animation
 from scipy.ndimage import gaussian_filter
 
-from algorithm import Agent, SingleAgent, softmax
+from algorithm import SingleAgent
 
 if __name__ == '__main__':
     n_states = 10
@@ -25,7 +26,6 @@ if __name__ == '__main__':
                         transitions=transitions,
                         rewards=rewards,
                         max_timesteps=5)
-    sim = agent.sim
 
 
     def x(j):
@@ -33,31 +33,31 @@ if __name__ == '__main__':
 
 
     def y(i):
-        return sim.n_states - i - 1
+        return agent.n_states - i - 1
 
 
     fig = plt.figure()
     ax = plt.axes()
 
-    value_matrix = np.zeros((sim.n_batch, sim.n_states),
+    value_matrix = np.zeros((agent.n_batch, agent.n_states),
                             dtype=np.float)
     im = plt.imshow(value_matrix, vmin=0, vmax=1, cmap='Oranges', animated=True)
     im.set_zorder(0)
-    states = np.random.choice(sim.n_states) * np.ones(sim.n_batch, dtype=int)
+    states = np.random.choice(agent.n_states) * np.ones(agent.n_batch, dtype=int)
 
     next_states = states
     pos = states.astype(float)
     step_size = 0
     circles = []
     texts = []
-    for i in range(sim.n_batch):
+    for i in range(agent.n_batch):
         color = 'black' if i == 0 else 'gray'
         circle = plt.Circle((states[i], y(i)), radius=0.2, facecolor=color,
                             zorder=1, edgecolor='black')
         circles.append(circle)
         ax.add_patch(circle)
-        for j in range(sim.n_states):
-            texts.append(ax.text(j, i, int(sim.rewards[i, j]), zorder=2))
+        for j in range(agent.n_states):
+            texts.append(ax.text(j, i, int(agent.rewards[i, j]), zorder=2))
 
     timestep_text = ax.text(.5, 0, 'timestep = {}'.format(0),
                             verticalalignment='bottom',
@@ -68,8 +68,8 @@ if __name__ == '__main__':
 
     def updatefig(_):
         global pos, states, next_states, step_size, agent
-        if sim.timestep == sim.max_timesteps:
-            states = sim.reset()
+        if agent.timestep == agent.max_timesteps:
+            states = agent.reset()
             next_states = states.astype(int)
             pos = states.astype(float)
             step_size = 0
@@ -85,7 +85,7 @@ if __name__ == '__main__':
             pos += step_size
         for i, j in enumerate(pos):
             circles[i].center = (x(j), i)
-        timestep_text.set_text('timestep = {}'.format(sim.timestep))
+        timestep_text.set_text('timestep = {}'.format(agent.timestep))
         return [im, timestep_text] + texts + circles
 
 

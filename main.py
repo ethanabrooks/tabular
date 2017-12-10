@@ -56,6 +56,10 @@ class Animation:
         self.timestep_text.set_text('timestep = {}'.format(self.agent.timestep))
         return [self.im, self.timestep_text] + self.texts + self.circles
 
+    def animate(self, fig):
+        return animation.FuncAnimation(fig, self.updatefig, interval=.01, blit=True)
+
+
 
 if __name__ == '__main__':
     agent1, value_matrix1, states1, next_states1 = algorithm.init()
@@ -71,6 +75,5 @@ if __name__ == '__main__':
 
     fig, (ax1, ax2) = plt.subplots(2)
 
-    ani = Animation(ax1, agent1, value_matrix1, states1)
-    _ = animation.FuncAnimation(fig, ani.updatefig, interval=.01, blit=True)
+    _ = Animation(ax1, agent1, value_matrix1, states1).animate(fig)
     plt.show()

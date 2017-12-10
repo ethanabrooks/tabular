@@ -6,11 +6,13 @@ from matplotlib import animation
 
 import algorithm
 
-SPEED = 1/20
+SPEED = 1 / 20
 assert SPEED < 1
 
 if __name__ == '__main__':
     agent1, value_matrix1, states1, next_states1 = algorithm.init()
+
+
     # agent2, value_matrix2, states2, next_states2 = algorithm.init()
 
 
@@ -25,26 +27,32 @@ if __name__ == '__main__':
     fig, (ax1, ax2) = plt.subplots(2)
 
     ax, agent, value_matrix, states, next_states = ax1, agent1, value_matrix1, states1, next_states1
-    im = ax.imshow(value_matrix, vmin=0, vmax=1, cmap='Oranges',
-                   animated=True)
-    im.set_zorder(0)
-    pos = states.astype(float)
-    step_size = 0
-    circles = []
-    texts = []
-    for i in range(agent.n_batch):
-        color = 'black' if i == 0 else 'gray'
-        circle = plt.Circle((states[i], y(i)), radius=0.2, facecolor=color,
-                            zorder=1, edgecolor='black')
-        circles.append(circle)
-        ax.add_patch(circle)
-        for j in range(agent.n_states):
-            texts.append(ax.text(j, i, int(agent.rewards[i, j]), zorder=2))
 
-    timestep_text = ax.text(.5, 0, 'timestep = {}'.format(0),
-                            verticalalignment='bottom',
-                            horizontalalignment='center',
-                            transform=ax.transAxes, zorder=2)
+
+    def init(ax, agent, value_matrix, states):
+        im = ax.imshow(value_matrix, vmin=0, vmax=1, cmap='Oranges',
+                       animated=True)
+        im.set_zorder(0)
+        pos = states.astype(float)
+        step_size = 0
+        circles = []
+        texts = []
+        for i in range(agent.n_batch):
+            color = 'black' if i == 0 else 'gray'
+            circle = plt.Circle((states[i], y(i)), radius=0.2, facecolor=color,
+                                zorder=1, edgecolor='black')
+            circles.append(circle)
+            ax.add_patch(circle)
+            for j in range(agent.n_states):
+                texts.append(ax.text(j, i, int(agent.rewards[i, j]), zorder=2))
+
+        timestep_text = ax.text(.5, 0, 'timestep = {}'.format(0),
+                                verticalalignment='bottom',
+                                horizontalalignment='center',
+                                transform=ax.transAxes, zorder=2)
+        return im, texts, circles, pos, step_size, timestep_text
+
+    im, texts, circles, pos, step_size, timestep_text = init(ax1, agent1, value_matrix1, states1)
 
 
     def updatefig(_):

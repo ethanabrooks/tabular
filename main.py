@@ -55,16 +55,13 @@ def identity(x):
 
 if __name__ == '__main__':
     n_states = 10
-    n_batch = 3
-    rewards = np.zeros((n_batch, n_states))
-    rewards[range(n_batch), np.random.randint(n_states, size=n_batch)] = 1
     transitions = np.stack([
         np.eye(n_states)[:, np.roll(np.arange(n_states), shift)]
         for shift in [-1, 1]])  # shifted and blurred I matrices
     transitions[[0, 1], [0, n_states - 1], [n_states - 1, 0]] = 0
     transitions[[0, 1], [0, n_states - 1], [0, n_states - 1]] = 1
     transitions = gaussian_filter(transitions, .3)
-    agent1 = algorithm.OptimizedAgent(
+    agent1 = algorithm.OptimizedSingleAgent(
         gamma=.95,
         alpha=.95,
         n_states=n_states,
@@ -75,15 +72,15 @@ if __name__ == '__main__':
         # rewards=rewards,
     )
 
-    agent2 = algorithm.Agent(
+    agent2 = algorithm.SingleAgent(
         gamma=.95,
         alpha=.95,
         n_states=n_states,
+        n_batch=agent1.n_batch,
         n_actions=2,
         transitions=transitions,
         max_timesteps=n_states,
-        n_batch=n_batch,
-        rewards=rewards,
+        rewards=agent1.rewards,
     )
 
     fig, (ax1, ax2) = plt.subplots(2)
@@ -91,7 +88,7 @@ if __name__ == '__main__':
     ax1.set_title('Optimized Agent')
     ax2.axis('off')
     ax2.set_title('Baseline Agent')
-    speed = 1 / 20
+    speed = 1 / 4
 
 
     def animate(ax, agent):

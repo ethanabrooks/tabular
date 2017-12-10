@@ -19,14 +19,14 @@ l2, = p2.plot([], [], 'r')
 
 def gen1():
     i = 0.5
-    while (True):
+    while True:
         yield i
         i += 0.1
 
 
 def gen2():
     j = 0
-    while (True):
+    while True:
         yield j
         j += 1
 

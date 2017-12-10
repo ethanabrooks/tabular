@@ -24,15 +24,12 @@ class Agent:
         self.transitions = transitions
         self.max_timesteps = max_timesteps
         self.rewards = rewards
-        self.timestep = None
         self.reset()
 
     def reset(self):
-        self.timestep = 0
         return np.random.choice(self.n_states, size=self.n_batch)
 
     def step_sim(self, actions, states):
-        self.timestep += 1
         n_batch, = actions.shape
         assert states.shape == (n_batch,)
 
@@ -108,7 +105,6 @@ class SingleAgent(Agent):
         return actions, next_states, reward
 
     def reset(self):
-        self.timestep = 0
         return np.random.choice(self.n_states) * np.ones(self.n_batch,
                                                          dtype=int)
 
@@ -132,8 +128,6 @@ class OptimizedAgent(Agent):
         product_values[range(self.n_states), states] = values1 * values2
         values_max = product_values.max(axis=0)
         new_values = np.maximum(value_matrix[0], values_max)
-        old_values = value_matrix[0].copy()
-        print(old_values, new_values)
         value_matrix[0] = new_values
         return value_matrix
 
@@ -147,14 +141,13 @@ class OptimizedSingleAgent(OptimizedAgent):
         return actions, states, next_states, reward
 
     def reset(self):
-        self.timestep = 0
         return np.random.choice(self.n_states) * np.ones(self.n_batch,
                                                          dtype=int)
 
 
 def init():
     np.set_printoptions(precision=2)
-    n_states = 4
+    n_states = 10
     n_batch = 3
     rewards = np.zeros((n_batch, n_states))
     rewards[range(n_batch), np.random.randint(n_states, size=n_batch)] = 1
@@ -181,8 +174,11 @@ def init():
 
 if __name__ == '__main__':
     agent1, states1 = init()
+    timestep = 0
     while True:
-        if agent1.timestep == agent1.max_timesteps:
+        if timestep == agent1.max_timesteps:
             states1 = agent1.reset()
+            timestep = 0
         else:
             actions, states1, reward = agent1.step(states1)
+            timestep += 1

@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import animation
 from scipy.ndimage import gaussian_filter
 
-from algorithm import Agent
+from algorithm import Agent, SingleAgent
 
 if __name__ == '__main__':
     n_states = n_batch = 4
@@ -12,15 +12,15 @@ if __name__ == '__main__':
     transitions = np.stack([gaussian_filter(
         np.eye(n_states)[:, np.roll(np.arange(n_states), shift)], .5)
         for shift in [-1, 1]])  # shifted and blurred I matrices
-    agent = Agent(gamma=.95,
-                  alpha=.9,
-                  n_states=n_states,
-                  n_batch=n_batch,
-                  n_actions=2,
-                  transitions=transitions,
-                  rewards=rewards,
-                  episodes=200,
-                  max_timesteps=100)
+    agent = SingleAgent(gamma=.95,
+                        alpha=.9,
+                        n_states=n_states,
+                        n_batch=n_batch,
+                        n_actions=2,
+                        transitions=transitions,
+                        rewards=rewards,
+                        max_timesteps=5)
+    sim = agent.sim
 
 
     def x(j):
@@ -28,43 +28,56 @@ if __name__ == '__main__':
 
 
     def y(i):
-        return agent.sim.n_states - i - 1
+        return sim.n_states - i - 1
 
 
     fig = plt.figure()
     ax = plt.axes()
 
-    value_matrix = np.zeros((agent.sim.n_batch, agent.sim.n_states),
+    value_matrix = np.zeros((sim.n_batch, sim.n_states),
                             dtype=np.float)
     im = plt.imshow(value_matrix, vmin=0, vmax=1, cmap='Oranges', animated=True)
     im.set_zorder(0)
-    states = np.random.choice(agent.sim.n_states) * np.ones(agent.sim.n_states,
-                                                            dtype=int)
+    states = np.random.choice(sim.n_states) * np.ones(sim.n_states,
+                                                      dtype=int)
     next_states = states
     pos = states.astype(float)
     step_size = 0
     circles = []
     texts = []
-    for i in range(agent.sim.n_batch):
-        circle = plt.Circle((states[i], y(i)), radius=0.2, color='black',
-                            zorder=1)
+    for i in range(sim.n_batch):
+        color = 'black' if i == 0 else 'gray'
+        circle = plt.Circle((states[i], y(i)), radius=0.2, facecolor=color,
+                            zorder=1, edgecolor='black')
         circles.append(circle)
         ax.add_patch(circle)
-        for j in range(agent.sim.n_states):
-            texts.append(ax.text(j, i, int(agent.sim.rewards[i, j]), zorder=2))
+        for j in range(sim.n_states):
+            texts.append(ax.text(j, i, int(sim.rewards[i, j]), zorder=2))
+
+    timestep_text = ax.text(.5, 0, 'timestep = {}'.format(0),
+                            verticalalignment='bottom',
+                            horizontalalignment='center',
+
+                            transform=ax.transAxes, zorder=2)
 
 
     def updatefig(_):
         global pos, states, next_states, step_size, agent
-        if np.allclose(pos, next_states):
-            actions, states, next_states, reward = agent.step(states)
-            step_size = (next_states - states) / 20
-            states = next_states
-            im.set_array(agent.value_matrix)
-        pos += step_size
+        if sim.timestep == sim.max_timesteps:
+            sim.reset()
+            pos = states.astype(float)
+            step_size = 0
+        else:
+            if np.allclose(pos, next_states):
+                actions, states, next_states, reward = agent.step(states)
+                step_size = (next_states - states) / 20
+                states = next_states
+                im.set_array(agent.value_matrix)
+            pos += step_size
         for i, j in enumerate(pos):
             circles[i].center = (x(j), i)
-        return [im] + texts + circles
+        timestep_text.set_text('timestep = {}'.format(sim.timestep))
+        return [im, timestep_text] + texts + circles
 
 
     ani = animation.FuncAnimation(fig, updatefig, interval=.01, blit=True)

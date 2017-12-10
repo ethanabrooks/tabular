@@ -13,18 +13,17 @@ def softmax(array, axis=None):
 
 class Agent:
     def __init__(self, gamma, alpha, n_states, n_batch, n_actions,
-                 transitions, rewards, episodes, max_timesteps):
+                 transitions, rewards, max_timesteps):
         self.gamma = gamma
         self.alpha = alpha
-        self.episodes = episodes
-        self.max_timesteps = max_timesteps
-        self.states = np.random.choice(n_states, n_batch)
         self.value_matrix = np.zeros((n_batch, n_states))
         self.sim = Sim(n_states=n_states,
                        n_actions=n_actions,
                        n_batch=n_batch,
                        transitions=transitions,
-                       rewards=rewards)
+                       rewards=rewards,
+                       max_timesteps=max_timesteps)
+        self.sim.reset()
 
     def act(self, states, value_matrix):
         n_batch, = states.shape
@@ -75,15 +74,32 @@ class Agent:
         return actions, states, next_states, reward
 
 
+class SingleAgent(Agent):
+    def step(self, states):
+        actions = self.act(states, self.value_matrix)
+        next_states, reward = self.sim.step(actions, states)
+        next_states = np.ones_like(next_states) * next_states[0]
+        self.value_matrix = self.update(self.value_matrix, states, next_states)
+        return actions, states, next_states, reward
+
+
 class Sim:
-    def __init__(self, n_states, n_actions, n_batch, transitions, rewards):
+    def __init__(self, n_states, n_actions, n_batch, transitions, rewards, max_timesteps):
         self.n_states = n_states
         self.n_actions = n_actions
         self.n_batch = n_batch
         self.transitions = transitions
+        self.max_timesteps = max_timesteps
         self.rewards = rewards
+        self.states = self.timestep = None
+        self.reset()
+
+    def reset(self):
+        self.states = np.random.choice(self.n_states, self.n_batch)
+        self.timestep = 0
 
     def step(self, actions, states):
+        self.timestep += 1
         n_batch, = actions.shape
         assert states.shape == (n_batch,)
 

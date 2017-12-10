@@ -3,15 +3,19 @@ import numpy as np
 from matplotlib import animation
 from scipy.ndimage import gaussian_filter
 
-from algorithm import Agent, SingleAgent
+from algorithm import Agent, SingleAgent, softmax
 
 if __name__ == '__main__':
-    n_states = n_batch = 4
+    n_states = 10
+    n_batch = 3
     rewards = np.zeros((n_batch, n_states))
     rewards[range(n_batch), np.random.randint(n_states, size=n_batch)] = 1
-    transitions = np.stack([gaussian_filter(
-        np.eye(n_states)[:, np.roll(np.arange(n_states), shift)], .5)
+    transitions = np.stack([
+        np.eye(n_states)[:, np.roll(np.arange(n_states), shift)]
         for shift in [-1, 1]])  # shifted and blurred I matrices
+    transitions[[0, 1], [0, n_states - 1], [n_states - 1, 0]] = 0
+    transitions[[0, 1], [0, n_states - 1], [0, n_states - 1]] = 1
+    transitions = gaussian_filter(transitions, .1)
     agent = SingleAgent(gamma=.95,
                         alpha=.9,
                         n_states=n_states,
@@ -38,8 +42,8 @@ if __name__ == '__main__':
                             dtype=np.float)
     im = plt.imshow(value_matrix, vmin=0, vmax=1, cmap='Oranges', animated=True)
     im.set_zorder(0)
-    states = np.random.choice(sim.n_states) * np.ones(sim.n_states,
-                                                      dtype=int)
+    states = np.random.choice(sim.n_states) * np.ones(sim.n_batch, dtype=int)
+
     next_states = states
     pos = states.astype(float)
     step_size = 0
@@ -65,12 +69,15 @@ if __name__ == '__main__':
         global pos, states, next_states, step_size, agent
         if sim.timestep == sim.max_timesteps:
             sim.reset()
-            pos = states.astype(float)
+            next_states = states = sim.states.astype(int)
+            pos = sim.states.astype(float)
             step_size = 0
         else:
             if np.allclose(pos, next_states):
+                # print('before step', pos)
                 actions, states, next_states, reward = agent.step(states)
-                step_size = (next_states - states) / 20
+                step_size = (next_states - states) / 30
+                # print('step size', step_size)
                 states = next_states
                 im.set_array(agent.value_matrix)
             pos += step_size

@@ -50,13 +50,14 @@ def identity(x):
 
 
 if __name__ == '__main__':
-    agent1, states1 = algorithm.init()
-    agent2, states2 = algorithm.init()
     fig, (ax1, ax2) = plt.subplots(2)
-
     speed = 1 / 20
-    frames1 = partial(updatefig, ax1, agent1, states1, speed)
-    frames2 = partial(updatefig, ax2, agent2, states2, speed)
-    a1 = animation.FuncAnimation(fig, identity, frames1, interval=.01, blit=True)
-    a2 = animation.FuncAnimation(fig, identity, frames2, interval=.01, blit=True)
+    frames1 = partial(updatefig, ax1, *algorithm.init(), speed)
+    frames2 = partial(updatefig, ax2, *algorithm.init(), speed)
+
+    def animate(frames):
+        return animation.FuncAnimation(fig, identity, frames,
+                                       interval=.01, blit=True)
+    a1 = animate(frames1)
+    a2 = animate(frames2)
     plt.show()

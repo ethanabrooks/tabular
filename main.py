@@ -21,8 +21,8 @@ if __name__ == '__main__':
     fig, (ax1, ax2) = plt.subplots(2)
 
     for ax, agent, value_matrix, states, next_states in (
-            [ax1, agent1, value_matrix1, states1, next_states1],
-            [ax2, agent2, value_matrix2, states2, next_states2]):
+            [[ax1, agent1, value_matrix1, states1, next_states1]]):
+            # [ax2, agent2, value_matrix2, states2, next_states2]):
         im = ax.imshow(value_matrix, vmin=0, vmax=1, cmap='Oranges', animated=True)
         im.set_zorder(0)
         pos = states.astype(float)

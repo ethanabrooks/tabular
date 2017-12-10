@@ -6,6 +6,9 @@ from matplotlib import animation
 
 import algorithm
 
+SPEED = 1/20
+assert SPEED < 1
+
 if __name__ == '__main__':
     agent1, value_matrix1, states1, next_states1 = algorithm.init()
     # agent2, value_matrix2, states2, next_states2 = algorithm.init()
@@ -45,7 +48,7 @@ if __name__ == '__main__':
 
 
     def updatefig(_):
-        global states1, next_states1, step_size, agent1
+        global next_states1, step_size, agent1
         pos = [circle.center[0] for circle in circles]
         if agent1.timestep == agent1.max_timesteps:
             states1 = agent1.reset()
@@ -55,10 +58,9 @@ if __name__ == '__main__':
             time.sleep(1)
         else:
             if np.allclose(pos, next_states1):
-                assert np.allclose(states1, next_states1), (states1, next_states1)
-                actions, next_states1, reward = agent1.step(states1)
-                step_size = (next_states1 - states1) / 5
                 states1 = next_states1
+                actions, next_states1, reward = agent1.step(states1)
+                step_size = (next_states1 - states1) * SPEED
                 im.set_array(agent1.value_matrix)
             pos += step_size
         for i, j in enumerate(pos):

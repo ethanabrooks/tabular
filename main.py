@@ -1,8 +1,8 @@
 import time
+from functools import partial
 
 import matplotlib.pyplot as plt
 import numpy as np
-from functools import partial
 from matplotlib import animation
 from scipy.ndimage import gaussian_filter
 
@@ -19,6 +19,7 @@ def updatefig(ax, agent, states, speed):
                             verticalalignment='bottom',
                             horizontalalignment='center',
                             transform=ax.transAxes, zorder=2)
+
     circles = []
     texts = []
     for i in range(agent.n_batch):
@@ -86,6 +87,10 @@ if __name__ == '__main__':
     )
 
     fig, (ax1, ax2) = plt.subplots(2)
+    ax1.axis('off')
+    ax1.set_title('Optimized Agent')
+    ax2.axis('off')
+    ax2.set_title('Baseline Agent')
     speed = 1 / 20
 
 
@@ -97,4 +102,5 @@ if __name__ == '__main__':
 
     a1 = animate(ax1, agent1)
     a2 = animate(ax2, agent2)
+
     plt.show()

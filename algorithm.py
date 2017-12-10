@@ -97,12 +97,12 @@ class Sim:
         self.transitions = transitions
         self.max_timesteps = max_timesteps
         self.rewards = rewards
-        self.states = self.timestep = None
+        self.timestep = None
         self.reset()
 
     def reset(self):
-        self.states = np.random.choice(self.n_states, size=self.n_batch)
         self.timestep = 0
+        return np.random.choice(self.n_states, size=self.n_batch, dtype=int)
 
     def step(self, actions, states):
         self.timestep += 1
@@ -124,5 +124,5 @@ class Sim:
 
 class SingleSim(Sim):
     def reset(self):
-        self.states = np.random.choice(self.n_states) * np.ones(self.n_batch)
         self.timestep = 0
+        return np.random.choice(self.n_states) * np.ones(self.n_batch, dtype=int)

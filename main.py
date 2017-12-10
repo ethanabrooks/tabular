@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 from matplotlib import animation
 from scipy.ndimage import gaussian_filter
 
@@ -68,10 +69,11 @@ if __name__ == '__main__':
     def updatefig(_):
         global pos, states, next_states, step_size, agent
         if sim.timestep == sim.max_timesteps:
-            sim.reset()
-            next_states = states = sim.states.astype(int)
-            pos = sim.states.astype(float)
+            states = sim.reset()
+            next_states = states.astype(int)
+            pos = states.astype(float)
             step_size = 0
+            time.sleep(1)
         else:
             if np.allclose(pos, next_states):
                 # print('before step', pos)

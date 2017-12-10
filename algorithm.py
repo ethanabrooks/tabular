@@ -138,7 +138,7 @@ class OptimizedSingleAgent(OptimizedAgent):
         next_states, reward = self.step_sim(actions, states)
         next_states = np.ones_like(next_states) * next_states[0]
         self.value_matrix = self.update(self.value_matrix, states, next_states)
-        return actions, states, next_states, reward
+        return actions, next_states, reward
 
     def reset(self):
         return np.random.choice(self.n_states) * np.ones(self.n_batch,

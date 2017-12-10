@@ -174,18 +174,15 @@ def init():
                            # rewards=rewards,
                            )
 
-    value_matrix = np.zeros((agent.n_batch, agent.n_states),
-                            dtype=np.float)
-    states = np.random.choice(agent.n_states) * np.ones(agent.n_batch,
-                                                        dtype=int)
-    next_states = states
-    return agent, value_matrix, states, next_states
+    state = np.random.choice(agent.n_states)
+    states = state * np.ones(agent.n_batch, dtype=int)
+    return agent, states
 
 
 if __name__ == '__main__':
-    agent1, value_matrix, states1, next_states1 = init()
+    agent1, states1 = init()
     while True:
         if agent1.timestep == agent1.max_timesteps:
             states1 = agent1.reset()
         else:
-            actions, _, states1, reward = agent1.step(states1)
+            actions, states1, reward = agent1.step(states1)

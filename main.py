@@ -9,8 +9,8 @@ import algorithm
 
 
 def updatefig(ax, agent, states, speed):
-    im = ax.imshow(agent.value_matrix, vmin=0, vmax=1, cmap='Oranges',
-                   animated=True)
+    im = ax.imshow(agent.value_matrix, vmin=0, vmax=1,
+                   cmap='Oranges', animated=True)
     im.set_zorder(0)
     timestep_text = ax.text(.5, 0, 'timestep = {}'.format(0),
                             verticalalignment='bottom',
@@ -46,12 +46,14 @@ def updatefig(ax, agent, states, speed):
 
 
 if __name__ == '__main__':
+    agent1, states1 = algorithm.init()
+    agent2, states2 = algorithm.init()
+    fig, (ax1, ax2) = plt.subplots(2)
+
     identity = lambda x: x
-    agent1, value_matrix1, states1, next_states1 = algorithm.init()
-    # agent2, value_matrix2, states2, next_states2 = algorithm.init()
-    fig, ax1 = plt.subplots(1)
-    # _ = Animation(ax1, agent1, states1).animate(fig)
-    frames1 = partial(updatefig, ax1, agent1, states1, 1 / 20)
+    speed = 1/20
+    frames1 = partial(updatefig, ax1, agent1, states1, speed)
+    frames2 = partial(updatefig, ax2, agent2, states2, speed)
     _ = animation.FuncAnimation(fig, identity, frames1, interval=.01, blit=True)
-    # _ = Animation(ax2, agent2, states2).animate(fig)
+    _ = animation.FuncAnimation(fig, identity, frames2, interval=.01, blit=True)
     plt.show()

@@ -88,6 +88,7 @@ class Agent:
         value_matrix *= self.alpha
         value_matrix[range(n_batch), states] += (1 - self.alpha) * (
             rewards + next_values)
+
         return value_matrix
 
     def step(self, states):
@@ -127,12 +128,15 @@ class OptimizedAgent(Agent):
         values2 = value_matrix[[0] * self.n_states, self.goal_ids]
         product_values = np.ones((self.n_states, self.n_states)) * -np.inf
         product_values[range(self.n_states), states] = values1 * values2
-        new_values = np.maximum(product_values.max(axis=0), value_matrix[0])
-        value_matrix[[0], states] = new_values
+        values_max = product_values.max(axis=0)
+        new_values = np.maximum(value_matrix[0], values_max)
+        new_values = np.minimum(new_values, 1)
+        value_matrix[0] = new_values
         return value_matrix
 
 
 def init():
+    np.set_printoptions(precision=2)
     n_states = 5
     n_batch = 3
     rewards = np.zeros((n_batch, n_states))
@@ -159,3 +163,11 @@ def init():
                                                         dtype=int)
     next_states = states
     return agent, value_matrix, states, next_states
+
+if __name__ == '__main__':
+    agent, value_matrix, states, next_states = init()
+    while True:
+        if agent.timestep == agent.max_timesteps:
+            states = agent.reset()
+        else:
+            actions, _, states, reward = agent.step(states)

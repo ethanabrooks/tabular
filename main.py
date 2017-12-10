@@ -46,16 +46,14 @@ if __name__ == '__main__':
         global pos, states, next_states, step_size, agent
         if agent.timestep == agent.max_timesteps:
             states = agent.reset()
-            next_states = states.astype(int)
+            next_states = states
             pos = states.astype(float)
             step_size = 0
             time.sleep(1)
         else:
             if np.allclose(pos, next_states):
-                # print('before step', pos)
                 actions, states, next_states, reward = agent.step(states)
                 step_size = (next_states - states) / 10
-                # print('step size', step_size)
                 states = next_states
                 im.set_array(agent.value_matrix)
             pos += step_size

@@ -79,16 +79,17 @@ class Agent:
         assert value_matrix.shape == (n_batch, self.n_states)
         assert next_states.shape == (n_batch,)
 
-        rewards = self.rewards[range(self.n_batch), states]
+        indexes = range(n_batch), states
+
+        rewards = self.rewards[indexes]
         assert rewards.shape == states.shape
 
         next_values = value_matrix[range(n_batch), next_states]
         assert next_values.shape == states.shape
 
-        value_matrix *= self.alpha
-        value_matrix[range(n_batch), states] += (1 - self.alpha) * (
+        value_matrix[indexes] *= self.alpha
+        value_matrix[indexes] += (1 - self.alpha) * (
             rewards + next_values)
-
         return value_matrix
 
     def step(self, states):
@@ -124,20 +125,36 @@ class OptimizedAgent(Agent):
 
     def update(self, value_matrix, states, next_states):
         value_matrix = super().update(value_matrix, states, next_states)
+        value_matrix = np.minimum(value_matrix, 1)
         values1 = value_matrix[range(self.n_states), states]
         values2 = value_matrix[[0] * self.n_states, self.goal_ids]
         product_values = np.ones((self.n_states, self.n_states)) * -np.inf
         product_values[range(self.n_states), states] = values1 * values2
         values_max = product_values.max(axis=0)
         new_values = np.maximum(value_matrix[0], values_max)
-        new_values = np.minimum(new_values, 1)
+        old_values = value_matrix[0].copy()
+        print(old_values, new_values)
         value_matrix[0] = new_values
         return value_matrix
 
 
+class OptimizedSingleAgent(OptimizedAgent):
+    def step(self, states):
+        actions = self.act(states, self.value_matrix)
+        next_states, reward = self.step_sim(actions, states)
+        next_states = np.ones_like(next_states) * next_states[0]
+        self.value_matrix = self.update(self.value_matrix, states, next_states)
+        return actions, states, next_states, reward
+
+    def reset(self):
+        self.timestep = 0
+        return np.random.choice(self.n_states) * np.ones(self.n_batch,
+                                                         dtype=int)
+
+
 def init():
     np.set_printoptions(precision=2)
-    n_states = 5
+    n_states = 4
     n_batch = 3
     rewards = np.zeros((n_batch, n_states))
     rewards[range(n_batch), np.random.randint(n_states, size=n_batch)] = 1
@@ -148,7 +165,7 @@ def init():
     transitions[[0, 1], [0, n_states - 1], [0, n_states - 1]] = 1
     transitions = gaussian_filter(transitions, .3)
     agent = OptimizedAgent(gamma=.95,
-                           alpha=.9,
+                           alpha=.95,
                            n_states=n_states,
                            n_actions=2,
                            transitions=transitions,
@@ -164,10 +181,11 @@ def init():
     next_states = states
     return agent, value_matrix, states, next_states
 
+
 if __name__ == '__main__':
-    agent, value_matrix, states, next_states = init()
+    agent1, value_matrix, states1, next_states1 = init()
     while True:
-        if agent.timestep == agent.max_timesteps:
-            states = agent.reset()
+        if agent1.timestep == agent1.max_timesteps:
+            states1 = agent1.reset()
         else:
-            actions, _, states, reward = agent.step(states)
+            actions, _, states1, reward = agent1.step(states1)

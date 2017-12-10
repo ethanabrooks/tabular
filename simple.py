@@ -20,7 +20,9 @@ l2, = p2.plot([], [], 'r')
 def gen1():
     i = 0.5
     while True:
-        yield i
+        y = i * x
+        l1.set_data(x, y)
+        yield l1,
         i += 0.1
 
 
@@ -32,8 +34,9 @@ def gen2():
 
 
 def run1(c):
-    y = c * x
-    l1.set_data(x, y)
+    return c
+    # y = c * x
+    # l1.set_data(x, y)
 
 
 def run2(c):
@@ -41,6 +44,6 @@ def run2(c):
     l2.set_data(x, y)
 
 
-ani1 = animation.FuncAnimation(fig, run1, gen1, interval=1)
+ani1 = animation.FuncAnimation(fig, run1, gen1, interval=1, blit=True)
 ani2 = animation.FuncAnimation(fig, run2, gen2, interval=1)
 plt.show()

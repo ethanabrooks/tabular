@@ -66,5 +66,5 @@ if __name__ == '__main__':
         return [im, timestep_text] + texts + circles
 
 
-    ani = animation.FuncAnimation(fig, updatefig, interval=.01, blit=True)
+    _ = animation.FuncAnimation(fig, updatefig, interval=.01, blit=True)
     plt.show()

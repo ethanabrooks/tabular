@@ -110,29 +110,43 @@ class SingleAgent(Agent):
 
 
 class OptimizedAgent(Agent):
-    def __init__(self, n_states, **kwargs):
+    def __init__(self, n_states, rewards, **kwargs):
         self.goal_ids = np.arange(n_states)
-        primary_goal = np.random.choice(n_states)
+        n_batch = int(n_states + 1)
+        self.goal_ids = np.random.choice(n_states, n_batch)
+        primary_goal = np.random.choice(n_batch)
         self.goal_ids[[0, primary_goal]] = self.goal_ids[[primary_goal, 0]]
-        rewards = np.zeros((n_states, n_states))
-        rewards[[range(n_states), self.goal_ids]] = 1
+        # rewards = np.vstack([np.eye(n_states), rewards])
+        if rewards is None:
+            rewards = np.zeros((n_batch, n_states))
+            rewards[[range(n_batch), self.goal_ids]] = 1
         super().__init__(rewards=rewards, n_states=n_states,
-                         n_batch=n_states, **kwargs)
+                         n_batch=n_batch, **kwargs)
 
     def update(self, value_matrix, states, next_states):
         value_matrix = super().update(value_matrix, states, next_states)
         value_matrix = np.minimum(value_matrix, 1)
-        values1 = value_matrix[range(self.n_states), states]
-        values2 = value_matrix[[0] * self.n_states, self.goal_ids]
-        product_values = np.ones((self.n_states, self.n_states)) * -np.inf
-        product_values[range(self.n_states), states] = values1 * values2
-        values_max = product_values.max(axis=0)
-        new_values = np.maximum(value_matrix[0], values_max)
-        value_matrix[0] = new_values
+        values1 = value_matrix[range(self.n_batch), states]
+        values2 = value_matrix[[0] * self.n_batch, self.goal_ids]
+        product_values = np.ones((self.n_batch + 1, self.n_states)) * -np.inf
+        product_values[range(self.n_batch), states] = values1 * values2
+        product_values[self.n_batch] = value_matrix[0]
+        value_matrix[0] = product_values.max(axis=0)
         return value_matrix
 
 
 class OptimizedSingleAgent(OptimizedAgent):
+    # def update(self, value_matrix, states, next_states):
+    #     value_matrix = super().update(value_matrix, states, next_states)
+    #     value_matrix = np.minimum(value_matrix, 1)
+    #     values1 = value_matrix[range(self.n_states), states]
+    #     values2 = value_matrix[[0] * self.n_states, self.goal_ids]
+    #     product_values = np.zeros((self.n_states + 1, self.n_states))
+    #     product_values[range(self.n_states), states] = values1 * values2
+    #     product_values[self.n_states] = value_matrix[0]
+    #     value_matrix[0] = product_values.sum(axis=0)
+    #     return value_matrix
+
     def step(self, states):
         actions = self.act(states, self.value_matrix)
         next_states, reward = self.step_sim(actions, states)

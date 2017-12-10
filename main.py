@@ -95,7 +95,7 @@ if __name__ == '__main__':
         states = agent.reset()
         frames = partial(updatefig, ax, agent, states, speed)
         return animation.FuncAnimation(fig, identity, frames,
-                                       interval=.01, blit=True)
+                                       interval=1, blit=True)
 
     a1 = animate(ax1, agent1)
     a2 = animate(ax2, agent2)

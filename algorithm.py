@@ -2,6 +2,7 @@
 
 import numpy as np
 from scipy.misc import logsumexp
+from scipy.ndimage import gaussian_filter
 
 
 def softmax(array, axis=None):
@@ -97,9 +98,6 @@ class Agent:
 
 
 class SingleAgent(Agent):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def step(self, states):
         actions = self.act(states, self.value_matrix)
         next_states, reward = self.step_sim(actions, states)
@@ -111,3 +109,53 @@ class SingleAgent(Agent):
         self.timestep = 0
         return np.random.choice(self.n_states) * np.ones(self.n_batch,
                                                          dtype=int)
+
+
+class OptimizedAgent(Agent):
+    def __init__(self, n_states, **kwargs):
+        self.goal_ids = np.arange(n_states)
+        primary_goal = np.random.choice(n_states)
+        self.goal_ids[[0, primary_goal]] = self.goal_ids[[primary_goal, 0]]
+        rewards = np.zeros((n_states, n_states))
+        rewards[[range(n_states), self.goal_ids]] = 1
+        super().__init__(rewards=rewards, n_states=n_states,
+                         n_batch=n_states, **kwargs)
+
+    def update(self, value_matrix, states, next_states):
+        value_matrix = super().update(value_matrix, states, next_states)
+        values1 = value_matrix[range(self.n_states), states]
+        values2 = value_matrix[[0] * self.n_states, self.goal_ids]
+        product_values = np.ones((self.n_states, self.n_states)) * -np.inf
+        product_values[range(self.n_states), states] = values1 * values2
+        new_values = np.maximum(product_values.max(axis=0), value_matrix[0])
+        value_matrix[[0], states] = new_values
+        return value_matrix
+
+
+def init():
+    n_states = 5
+    n_batch = 3
+    rewards = np.zeros((n_batch, n_states))
+    rewards[range(n_batch), np.random.randint(n_states, size=n_batch)] = 1
+    transitions = np.stack([
+        np.eye(n_states)[:, np.roll(np.arange(n_states), shift)]
+        for shift in [-1, 1]])  # shifted and blurred I matrices
+    transitions[[0, 1], [0, n_states - 1], [n_states - 1, 0]] = 0
+    transitions[[0, 1], [0, n_states - 1], [0, n_states - 1]] = 1
+    transitions = gaussian_filter(transitions, .3)
+    agent = OptimizedAgent(gamma=.95,
+                           alpha=.9,
+                           n_states=n_states,
+                           n_actions=2,
+                           transitions=transitions,
+                           max_timesteps=n_states,
+                           # n_batch=n_batch,
+                           # rewards=rewards,
+                           )
+
+    value_matrix = np.zeros((agent.n_batch, agent.n_states),
+                            dtype=np.float)
+    states = np.random.choice(agent.n_states) * np.ones(agent.n_batch,
+                                                        dtype=int)
+    next_states = states
+    return agent, value_matrix, states, next_states

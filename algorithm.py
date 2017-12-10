@@ -96,7 +96,7 @@ class Agent:
         actions = self.act(states, self.value_matrix)
         next_states, reward = self.step_sim(actions, states)
         self.value_matrix = self.update(self.value_matrix, states, next_states)
-        return actions, states, next_states, reward
+        return actions, next_states, reward
 
 
 class SingleAgent(Agent):
@@ -105,7 +105,7 @@ class SingleAgent(Agent):
         next_states, reward = self.step_sim(actions, states)
         next_states = np.ones_like(next_states) * next_states[0]
         self.value_matrix = self.update(self.value_matrix, states, next_states)
-        return actions, states, next_states, reward
+        return actions, next_states, reward
 
     def reset(self):
         self.timestep = 0

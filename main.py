@@ -11,8 +11,8 @@ import algorithm
 
 
 def updatefig(ax, agent, states, speed):
-    assert states.shape == (agent.n_batch,), \
-        (states.shape, agent.n_batch)
+    assert states.shape == (agent.n_agent,), \
+        (states.shape, agent.n_agent)
     im = ax.imshow(agent.value_matrix, vmin=0, vmax=1,
                    cmap='Oranges', animated=True)
     im.set_zorder(0)
@@ -23,7 +23,7 @@ def updatefig(ax, agent, states, speed):
 
     circles = []
     texts = []
-    for i in range(agent.n_batch):
+    for i in range(agent.n_agent):
         for j in range(agent.n_states):
             texts.append(ax.text(j, i, int(round(agent.rewards[i, j])),
                                  zorder=2))
@@ -93,7 +93,7 @@ if __name__ == '__main__':
         n_actions=2,
         transitions=transitions,
         max_timesteps=n_states,
-        # n_batch=n_batch,
+        # n_agent=n_agent,
         rewards=rewards,
     )
 
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     #     gamma=.95,
     #     alpha=.95,
     #     n_states=n_states,
-    #     n_batch=1,
+    #     n_agent=1,
     #     n_actions=2,
     #     transitions=transitions,
     #     max_timesteps=n_states,
@@ -114,7 +114,7 @@ if __name__ == '__main__':
         n_actions=2,
         transitions=transitions,
         max_timesteps=n_states,
-        # n_batch=n_batch,
+        # n_agent=n_agent,
         rewards=agent1.rewards,
     )
 
@@ -126,7 +126,7 @@ if __name__ == '__main__':
 
     def animate(ax, agent):
         ax.axis('off')
-        ax.set_ylim([-1, agent.n_batch])
+        ax.set_ylim([-1, agent.n_agent])
         states = agent.reset()
         frames = partial(updatefig, ax, agent, states, speed)
         return animation.FuncAnimation(fig, identity, frames,

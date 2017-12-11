@@ -125,20 +125,20 @@ def random_rewards(n_states, n_batch, rewards):
 
 class OptimizedAgent(Agent):
     def __init__(self, n_states, rewards, **kwargs):
-        n_batch = int(n_states / 2)
-        self.goal_ids, rewards = random_rewards(n_states, n_batch, rewards)
+        # n_batch = int(n_states / 2)
+        self.goal_ids, rewards = all_goals_rewards(n_states, rewards)
         super().__init__(rewards=rewards, n_states=n_states,
-                         n_batch=n_batch, **kwargs)
+                         n_batch=n_states + 1, **kwargs)
 
     def update(self, value_matrix, states, next_states):
         assert self.goal_ids.shape == (self.n_batch - 1, )
 
         value_matrix = super().update(value_matrix, states, next_states)
         value_matrix = np.minimum(value_matrix, 1)  # TODO: delete
-        values1 = value_matrix[range(1, self.n_batch), states[1:]]
-        values2 = value_matrix[[0] * (self.n_batch - 1), self.goal_ids]
+        values1 = value_matrix[range(1, self.n_batch), states[1:]]  # V_g'(s)
+        values2 = value_matrix[0, self.goal_ids]  # V_g(g')
         product_values = np.ones((self.n_batch, self.n_states)) * -np.inf
-        product_values[range(1, self.n_batch), states[1:]] = values1 * values2
+        product_values[range(1, self.n_batch), states[1:]] = values1 * values2  # V_g'(s) * V_g(g')
         product_values[0] = value_matrix[0]
         value_matrix[0] = product_values.max(axis=0)
         return value_matrix

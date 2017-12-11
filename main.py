@@ -82,7 +82,7 @@ def identity(x):
 if __name__ == '__main__':
     np.set_printoptions(precision=1)
     n_states = 10
-    transitions = stochastic_stepwise_transitions(sigma=.01, n_states=n_states)
+    transitions = stochastic_stepwise_transitions(sigma=.5, n_states=n_states)
     rewards = np.zeros(n_states)
     # rewards[[0, -1]] = [.001, .999]
     rewards[np.random.choice(n_states)] = 1
@@ -97,26 +97,26 @@ if __name__ == '__main__':
         rewards=rewards,
     )
 
-    agent2 = algorithm.Agent(
-        gamma=.95,
-        alpha=.95,
-        n_states=n_states,
-        n_batch=1,
-        n_actions=2,
-        transitions=transitions,
-        max_timesteps=n_states,
-        rewards=agent1.rewards,
-    )
-    # agent2 = algorithm.OptimizedAgent(
+    # agent2 = algorithm.Agent(
     #     gamma=.95,
     #     alpha=.95,
     #     n_states=n_states,
+    #     n_batch=1,
     #     n_actions=2,
     #     transitions=transitions,
     #     max_timesteps=n_states,
-    #     # n_batch=n_batch,
     #     rewards=agent1.rewards,
     # )
+    agent2 = algorithm.OptimizedAgent(
+        gamma=.95,
+        alpha=.95,
+        n_states=n_states,
+        n_actions=2,
+        transitions=transitions,
+        max_timesteps=n_states,
+        # n_batch=n_batch,
+        rewards=agent1.rewards,
+    )
 
     fig, (ax1, ax2) = plt.subplots(2)
     ax1.set_title('Optimized Agent')

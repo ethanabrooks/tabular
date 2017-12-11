@@ -109,28 +109,37 @@ class SingleAgent(Agent):
                                                          dtype=int)
 
 
+def all_goals_rewards(n_states, rewards):
+    goal_ids = np.arange(n_states)
+    rewards = np.vstack([rewards, np.eye(n_states)])
+    return goal_ids, rewards
+
+
+def random_rewards(n_states, n_batch, rewards):
+    goal_ids = np.random.choice(n_states, n_batch - 1)
+    alt_rewards = np.zeros((n_batch, n_states))
+    alt_rewards[[range(n_batch - 1), goal_ids]] = 1
+    rewards = np.vstack([rewards, alt_rewards])
+    return goal_ids, rewards
+
+
 class OptimizedAgent(Agent):
     def __init__(self, n_states, rewards, **kwargs):
-        self.goal_ids = np.arange(n_states)
-        n_batch = int(n_states + 1)
-        self.goal_ids = np.random.choice(n_states, n_batch)
-        primary_goal = np.random.choice(n_batch)
-        self.goal_ids[[0, primary_goal]] = self.goal_ids[[primary_goal, 0]]
-        # rewards = np.vstack([np.eye(n_states), rewards])
-        if rewards is None:
-            rewards = np.zeros((n_batch, n_states))
-            rewards[[range(n_batch), self.goal_ids]] = 1
+        n_batch = int(n_states / 2)
+        self.goal_ids, rewards = random_rewards(n_states, n_batch, rewards)
         super().__init__(rewards=rewards, n_states=n_states,
                          n_batch=n_batch, **kwargs)
 
     def update(self, value_matrix, states, next_states):
+        assert self.goal_ids.shape == (self.n_batch - 1, )
+
         value_matrix = super().update(value_matrix, states, next_states)
-        value_matrix = np.minimum(value_matrix, 1)
-        values1 = value_matrix[range(self.n_batch), states]
-        values2 = value_matrix[[0] * self.n_batch, self.goal_ids]
-        product_values = np.ones((self.n_batch + 1, self.n_states)) * -np.inf
-        product_values[range(self.n_batch), states] = values1 * values2
-        product_values[self.n_batch] = value_matrix[0]
+        value_matrix = np.minimum(value_matrix, 1)  # TODO: delete
+        values1 = value_matrix[range(1, self.n_batch), states[1:]]
+        values2 = value_matrix[[0] * (self.n_batch - 1), self.goal_ids]
+        product_values = np.ones((self.n_batch, self.n_states)) * -np.inf
+        product_values[range(1, self.n_batch), states[1:]] = values1 * values2
+        product_values[0] = value_matrix[0]
         value_matrix[0] = product_values.max(axis=0)
         return value_matrix
 

@@ -1,5 +1,6 @@
 import time
 from functools import partial
+import itertools
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,7 +16,7 @@ def updatefig(ax, agent, states, speed):
     im = ax.imshow(agent.value_matrix, vmin=0, vmax=1,
                    cmap='Oranges', animated=True)
     im.set_zorder(0)
-    timestep_text = ax.text(.5, 0, 'timestep = {}'.format(0),
+    timestep_text = ax.text(.5, 0, '',
                             verticalalignment='bottom',
                             horizontalalignment='center',
                             transform=ax.transAxes, zorder=2)
@@ -24,7 +25,8 @@ def updatefig(ax, agent, states, speed):
     texts = []
     for i in range(agent.n_batch):
         for j in range(agent.n_states):
-            texts.append(ax.text(j, i, int(agent.rewards[i, j]), zorder=2))
+            texts.append(ax.text(j, i, int(round(agent.rewards[i, j])),
+                                 zorder=2))
         y = agent.n_states - i - 1
         color = 'gray' if i == 0 else 'lightgray'
         circle = plt.Circle((states[i], y), radius=0.2, facecolor=color,
@@ -33,13 +35,14 @@ def updatefig(ax, agent, states, speed):
         ax.add_patch(circle)
 
     total_reward = 0
-    while True:
+    for episode in itertools.count(1):
         states = agent.reset()
         pos = states.astype(float)
         for timestep in range(agent.max_timesteps):
+            avg_reward = round(total_reward / float(episode), ndigits=2)
             timestep_text.set_text(
-                'timestep: {}/{}, reward: {}'.format(
-                    timestep, agent.max_timesteps, int(total_reward)))
+                'timestep: {}, avg. reward: {}'.format(
+                    timestep, avg_reward))
             im.set_array(agent.value_matrix)
             actions, next_states, reward = agent.step(states)
             total_reward += reward[0]
@@ -53,6 +56,25 @@ def updatefig(ax, agent, states, speed):
         time.sleep(.5)
 
 
+def stochastic_stepwise_transitions(sigma, n_states):
+    transitions = np.stack([
+        np.eye(n_states)[:, np.roll(np.arange(n_states), shift)]
+        for shift in [-1, 1]])  # shifted and blurred I matrices
+    transitions[[0, 1], [0, n_states - 1], [n_states - 1, 0]] = 0
+    transitions[[0, 1], [0, n_states - 1], [0, n_states - 1]] = 1
+    return gaussian_filter(transitions, sigma)
+
+
+def combination_lock_transitions(sigma, n_states):
+    left = np.zeros((n_states, n_states))
+    left[:, 0] = 1
+    transitions = np.stack([
+        left,
+        np.eye(n_states)[:, np.roll(np.arange(n_states), 1)]
+    ])
+    return gaussian_filter(transitions, sigma)
+
+
 def identity(x):
     return x
 
@@ -60,20 +82,10 @@ def identity(x):
 if __name__ == '__main__':
     np.set_printoptions(precision=1)
     n_states = 10
-    # transitions = np.stack([
-    #     np.eye(n_states)[:, np.roll(np.arange(n_states), shift)]
-    #     for shift in [-1, 1]])  # shifted and blurred I matrices
-    # transitions[[0, 1], [0, n_states - 1], [n_states - 1, 0]] = 0
-    # transitions[[0, 1], [0, n_states - 1], [0, n_states - 1]] = 1
-    left = np.zeros((n_states, n_states))
-    left[:, 0] = 1
-    transitions = np.stack([
-        left,
-        np.eye(n_states)[:, np.roll(np.arange(n_states), 1)]
-    ])
-    transitions = gaussian_filter(transitions, .1)
+    transitions = stochastic_stepwise_transitions(sigma=.01, n_states=n_states)
     rewards = np.zeros(n_states)
-    rewards[-1] = 1
+    # rewards[[0, -1]] = [.001, .999]
+    rewards[np.random.choice(n_states)] = 1
     agent1 = algorithm.OptimizedSingleAgent(
         gamma=.95,
         alpha=.95,
@@ -82,7 +94,7 @@ if __name__ == '__main__':
         transitions=transitions,
         max_timesteps=n_states,
         # n_batch=n_batch,
-        rewards=np.eye(n_states),
+        rewards=rewards,
     )
 
     agent2 = algorithm.Agent(
@@ -118,7 +130,7 @@ if __name__ == '__main__':
         states = agent.reset()
         frames = partial(updatefig, ax, agent, states, speed)
         return animation.FuncAnimation(fig, identity, frames,
-                                       interval=1, blit=True)
+                                       interval=.1, blit=True)
 
 
     a1 = animate(ax1, agent1)

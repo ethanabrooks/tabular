@@ -120,16 +120,18 @@ if __name__ == '__main__':
     speed = 1 / 20
 
 
-    def animate(ax, agent):
-        ax.axis('off')
-        ax.set_ylim([-1, agent.n_agents])
-        states = agent.reset()
-        frames = partial(updatefig, ax, agent, states, speed)
-        return animation.FuncAnimation(fig, identity, frames,
-                                       interval=.01, blit=True)
+    def animate():
+        ax1.axis('off')
+        ax1.set_ylim([-1, agent1.n_agents])
+        states = agent1.reset()
+        states2 = agent2.reset()
+        while True:
+            l1 = next(updatefig(ax1, agent1, states, speed))
+            l2 = next(updatefig(ax2, agent2, states2, speed))
+            yield l1 + l2
 
-
-    a1 = animate(ax1, agent1)
-    a2 = animate(ax2, agent2)
+    a1 = animation.FuncAnimation(fig, identity, animate,
+                                 interval=1, blit=True)
+    # a2 = animate(ax2, agent2)
 
     plt.show()

@@ -13,18 +13,25 @@ from algorithm import stochastic_stepwise_transitions
 Shape = namedtuple('Shape', 'height width')
 
 
-    # pygame.display.set_caption(name)
+# pygame.display.set_caption(name)
 
 
 def update():
-    if pygame.event.wait().type == QUIT:
-        raise SystemExit()
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            raise SystemExit()
 
 
 def array_to_image(array, color, scale):
     shape = np.array(array.shape) * scale
     array = scipy.misc.imresize(array, shape, interp='nearest')
     return color.reshape(1, 1, 3) * np.expand_dims(array, 2)
+
+
+def get_screen_shape(pad, shapes):
+    height = pad + sum([height + pad for height, width in shapes])
+    width = 2 * pad + max([width for height, width in shapes])
+    return width, height
 
 
 def get_subsurfaces(screen: pygame.Surface, pad, array_shapes: List[Shape]):
@@ -38,15 +45,8 @@ def get_subsurfaces(screen: pygame.Surface, pad, array_shapes: List[Shape]):
     return subsurfaces
 
 
-def get_screen_shape(pad, shapes):
-    height = pad + sum([height + pad for height, width in shapes])
-    width = 2 * pad + max([width for height, width in shapes])
-    return width, height
-
-
-def rescale_array(array, scale):
-    shape = np.array(array.shape) * scale
-    return scipy.misc.imresize(array, np.array(shape), interp='nearest')
+def blit_image(subsurface, image):
+    surfarray.blit_array(subsurface, image.transpose(1, 0, 2))
 
 
 def main():
@@ -87,45 +87,34 @@ def main():
         terminal=agent1.rewards[[0]].argmax(axis=1),
     )
     scale = 40
-    pad = 80
+    pad = 10
 
-    pygame.init()
-    print('Using %s' % surfarray.get_arraytype().capitalize())
-    print('Press the mouse button to advance image.')
-    print('Press the "s" key to save the current image.')
-
-    array1 = np.expand_dims(np.ones(4), 0)
-    print(array1)
+    array1 = agent1.rewards
     array1[0, 2] = 0
     array2 = np.expand_dims(np.ones(8), 1)
     array2[2, 0] = 0
-
-    shape1 = Shape(*(np.array(array1.shape) * scale))
-    shape2 = Shape(*(np.array(array2.shape) * scale))
-    array1 = rescale_array(array1, scale)
-    array2 = rescale_array(array2, scale)
-    # array1 = scipy.misc.imresize(agent1.array1, shape1, interp='nearest')
     orange = np.array([1, .4, 0])
-    array1 = orange.reshape(1, 1, 3) * np.expand_dims(array1, 2)
-    array2 = orange.reshape(1, 1, 3) * np.expand_dims(array2, 2)
 
-    shapes = [Shape(*array.shape[:2])
-              for array in [array1, array2]]
-
+    images = []
+    shapes = []
+    for array in [array1, array2]:
+        image = array_to_image(array, orange, scale)
+        shapes.append(Shape(*image.shape[:2]))
+        images.append(image)
     screen_shape = get_screen_shape(pad, shapes)
     screen = pygame.display.set_mode(screen_shape)
-    for subsurface, array in zip(get_subsurfaces(screen, pad, shapes), [array1, array2]):
-        surfarray.blit_array(subsurface, array.transpose(1, 0, 2))
-    # pygame.draw.rect(s1, (255, 0, 0), pygame.Rect((30, 40, 30, 50)))
+    subsurfaces = get_subsurfaces(screen, pad, shapes)
+    for subsurface, image in zip(subsurfaces, images):
+        blit_image(subsurface, image)
 
-    # screen2 = pygame.display.set_mode(shape)
-    # surfarray.blit_array(screen2, array)
-
-    pygame.display.flip()
-
-    # init(array1, 'striped')
+    pygame.init()
     while True:
-        update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                raise SystemExit()
+
+        blit_image(subsurface, np.random.random(image.shape) * 255)
+        pygame.display.flip()
 
 
 if __name__ == '__main__':

@@ -157,6 +157,9 @@ class OptimizedAgent(Agent):
 
         value_matrix = super().update(value_matrix, states, next_states,
                                       nonterminal)
+        return self.apply_triangle_inequality(states, value_matrix)
+
+    def apply_triangle_inequality(self, states, value_matrix):
         indexes = range(1, self.n_agents), states[1:]
         values1 = value_matrix[indexes]  # V_g'(s)
         values2 = value_matrix[0, self.goal_ids]  # V_g(g')

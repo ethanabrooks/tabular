@@ -1,5 +1,4 @@
 import time
-from functools import partial
 import itertools
 
 import matplotlib.pyplot as plt
@@ -22,7 +21,7 @@ def circle_color(i, terminal):
 def updatefig(ax, agent, speed):
     ax.axis('off')
     ax.set_ylim([-1, agent.n_agents])
-    im = ax.imshow(agent.value_matrix, vmin=0, vmax=1,
+    im = ax.imshow(agent.rewards, vmin=0, vmax=1,
                    cmap='Oranges', animated=True)
     im.set_zorder(0)
     timestep_text = ax.text(.5, 0, '',
@@ -42,6 +41,7 @@ def updatefig(ax, agent, speed):
         ax.add_patch(circle)
 
     total_reward = 0
+    value_matrix = np.zeros_like(agent.rewards)
     for episode in itertools.count(1):
         states = agent.reset()
         done = np.zeros_like(states, dtype=bool)
@@ -51,22 +51,27 @@ def updatefig(ax, agent, speed):
             timestep_text.set_text(
                 'timestep: {}, reward: {}'.format(
                     timestep, total_reward))
-            im.set_array(agent.value_matrix)
+            im.set_array(value_matrix)
             for i, (state, terminal, circle) in enumerate(zip(states, agent.terminal, circles)):
                 circle.set_facecolor(circle_color(i, state == terminal))
 
-            actions, next_states, reward, done = agent.step(states, done)
+            step_result = agent.step(states, value_matrix, done)
+            actions, next_states, reward, value_matrix, done = step_result
+            assert np.array_equal(states[done], next_states[done])
 
             total_reward += reward[0]
             step_size = (next_states - states) * speed
             assert np.all(step_size[done] == 0)
-
             states = next_states
+
             while not np.allclose(pos, next_states):
                 pos += step_size
                 for i, j in enumerate(pos):
                     circles[i].center = (j, i)
                 yield [im, timestep_text] + texts + circles
+
+
+
         time.sleep(.5)
 
 
@@ -83,7 +88,7 @@ if __name__ == '__main__':
     rewards[np.random.choice(n_states)] = 1
     agent1 = algorithm.OptimizedSingleAgent(
         gamma=.95,
-        alpha=.5,
+        alpha=.9,
         n_states=n_states,
         n_actions=2,
         transitions=transitions,
@@ -94,7 +99,7 @@ if __name__ == '__main__':
 
     agent2 = algorithm.Agent(
         gamma=.95,
-        alpha=.95,
+        alpha=.9,
         n_states=n_states,
         n_agents=1,
         n_actions=2,
@@ -121,9 +126,9 @@ if __name__ == '__main__':
 
     def animate():
         artists1 = updatefig(ax1, agent1, speed)
-        # artists2 = updatefig(ax2, agent2, speed)
+        artists2 = updatefig(ax2, agent2, speed)
         while True:
-            yield next(artists1)  #+ next(artists2)
+            yield next(artists1) + next(artists2)
 
     a1 = animation.FuncAnimation(fig, identity, animate,
                                  interval=1, blit=True)

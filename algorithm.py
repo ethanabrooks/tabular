@@ -99,9 +99,7 @@ class Agent:
         assert next_states.shape == (n_agents,)
         assert self.terminal.shape == (n_agents,)
 
-        not_done = np.logical_not(done)  # interpolate with reward
-        not_terminating = states != self.terminal # type: np.ndarray
-        # interpolate with reward + next_value
+        # values
 
         rewards = self.rewards[range(n_agents), states]
         assert rewards.shape == (n_agents,)
@@ -109,10 +107,25 @@ class Agent:
         next_values = value_matrix[range(n_agents), next_states]
         assert next_values.shape == (n_agents,)
 
-        value_matrix[np.arange(n_agents)[not_done], states[not_done]] *= self.alpha
-        value_matrix[np.arange(n_agents)[not_done], states[not_done]] += (1 - self.alpha) * rewards[not_done]
-        value_matrix[np.arange(n_agents)[not_terminating], states[not_terminating]] += (1 - self.alpha) * next_values[not_terminating]
-        assert np.all(value_matrix < 1), value_matrix
+        # indices
+
+        not_done = np.logical_not(done)
+        # interpolate with reward
+        not_terminating = np.not_equal(states, self.terminal)
+        # interpolate with reward + next_value
+
+        def _2d(indices):
+            return np.arange(n_agents)[indices], states[indices]
+
+        # updates
+
+        value_matrix[_2d(not_done)] *= self.alpha
+        value_matrix[_2d(not_done)] += \
+            (1 - self.alpha) * rewards[not_done]
+        value_matrix[_2d(not_terminating)] += \
+            (1 - self.alpha) * next_values[not_terminating]
+
+        assert np.all(np.less(value_matrix, 1))
         return value_matrix
 
     def step(self, states, value_matrix, done):

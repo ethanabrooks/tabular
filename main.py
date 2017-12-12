@@ -87,7 +87,7 @@ if __name__ == '__main__':
     # rewards[[0, -1]] = [.001, .999]
     rewards[np.random.choice(n_states)] = 1
     agent1 = algorithm.OptimizedSingleAgent(
-        gamma=.5,
+        gamma=.95,
         alpha=.9,
         n_states=n_states,
         n_actions=2,

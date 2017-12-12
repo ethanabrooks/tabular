@@ -99,18 +99,20 @@ class Agent:
         assert next_states.shape == (n_agents,)
         assert self.terminal.shape == (n_agents,)
 
-        nonterminal = np.logical_not(done)
-        indexes = np.arange(n_agents)[nonterminal], states[nonterminal]
+        not_done = np.logical_not(done)  # interpolate with reward
+        not_terminating = states != self.terminal # type: np.ndarray
+        # interpolate with reward + next_value
 
-        rewards = self.rewards[indexes]
-        assert rewards.shape == (nonterminal.sum(),)
+        rewards = self.rewards[range(n_agents), states]
+        assert rewards.shape == (n_agents,)
 
-        next_values = value_matrix[np.arange(n_agents), next_states][
-            nonterminal]
-        assert next_values.shape == (nonterminal.sum(),)
+        next_values = value_matrix[range(n_agents), next_states]
+        assert next_values.shape == (n_agents,)
 
-        value_matrix[indexes] *= self.alpha
-        value_matrix[indexes] += (1 - self.alpha) * (rewards + next_values)
+        value_matrix[np.arange(n_agents)[not_done], states[not_done]] *= self.alpha
+        value_matrix[np.arange(n_agents)[not_done], states[not_done]] += (1 - self.alpha) * rewards[not_done]
+        value_matrix[np.arange(n_agents)[not_terminating], states[not_terminating]] += (1 - self.alpha) * next_values[not_terminating]
+        assert np.all(value_matrix < 1), value_matrix
         return value_matrix
 
     def step(self, states, value_matrix, done):
@@ -149,7 +151,6 @@ class OptimizedAgent(Agent):
         product_values[indexes] = values1 * values2  # V_g'(s) * V_g(g')
         product_values[0] = value_matrix[0]
         value_matrix[0] = product_values.max(axis=0)
-        print(value_matrix[0])
         return value_matrix
 
 

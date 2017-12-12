@@ -59,7 +59,8 @@ def updatefig(ax, agent, speed):
             actions, next_states, reward, value_matrix, done = step_result
             assert np.array_equal(states[done], next_states[done])
 
-            total_reward += reward[0]
+            if not done[0]:
+                total_reward += reward[0]
             step_size = (next_states - states) * speed
             assert np.all(step_size[done] == 0)
             states = next_states

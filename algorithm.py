@@ -12,6 +12,20 @@ def softmax(array, axis=None):
     return np.exp(array - denominator)
 
 
+def all_goals_rewards(n_states, rewards):
+    goal_ids = np.arange(n_states)
+    rewards = np.vstack([rewards, np.eye(n_states)])
+    return goal_ids, rewards
+
+
+def random_rewards(n_states, n_agents, rewards):
+    goal_ids = np.random.choice(n_states, n_agents - 1)
+    alt_rewards = np.zeros((n_agents, n_states))
+    alt_rewards[[range(n_agents - 1), goal_ids]] = 1
+    rewards = np.vstack([rewards, alt_rewards])
+    return goal_ids, rewards
+
+
 class Agent:
     def __init__(self, gamma, alpha, n_states, n_agents, n_actions,
                  transitions, rewards, terminal, max_timesteps):
@@ -108,37 +122,6 @@ class Agent:
         return actions, next_states, reward, value_matrix, done
 
 
-def fix_next_state(next_states, done):
-    next_states[np.logical_not(done)] = next_states[0]
-
-
-class SingleAgent(Agent):
-    def step(self, states, value_matrix, done):
-        step_result = super().step(states, value_matrix, done)
-        next_states, done = step_result[1], step_result[4]
-        fix_next_state(next_states, done)
-        assert np.array_equal(states[done], step_result[1][done])
-        return step_result
-
-    def reset(self):
-        return np.random.choice(self.n_states) * np.ones(self.n_agents,
-                                                         dtype=int)
-
-
-def all_goals_rewards(n_states, rewards):
-    goal_ids = np.arange(n_states)
-    rewards = np.vstack([rewards, np.eye(n_states)])
-    return goal_ids, rewards
-
-
-def random_rewards(n_states, n_agents, rewards):
-    goal_ids = np.random.choice(n_states, n_agents - 1)
-    alt_rewards = np.zeros((n_agents, n_states))
-    alt_rewards[[range(n_agents - 1), goal_ids]] = 1
-    rewards = np.vstack([rewards, alt_rewards])
-    return goal_ids, rewards
-
-
 class OptimizedAgent(Agent):
     def __init__(self, n_states, rewards, **kwargs):
         assert rewards.shape == (n_states,)
@@ -159,39 +142,32 @@ class OptimizedAgent(Agent):
 
         value_matrix = super().update(value_matrix, states, next_states,
                                       nonterminal)
-        value_matrix = np.minimum(value_matrix, 1)  # TODO: delete
-        values1 = value_matrix[range(1, self.n_agents), states[1:]]  # V_g'(s)
+        indexes = range(1, self.n_agents), states[1:]
+        values1 = value_matrix[indexes]  # V_g'(s)
         values2 = value_matrix[0, self.goal_ids]  # V_g(g')
-        product_values = np.ones((self.n_agents, self.n_states)) * -np.inf
-        product_values[range(1, self.n_agents), states[
-                                                1:]] = values1 * values2  # V_g'(s) * V_g(g')
+        product_values = np.ones_like(value_matrix) * -np.inf
+        product_values[indexes] = values1 * values2  # V_g'(s) * V_g(g')
         product_values[0] = value_matrix[0]
         value_matrix[0] = product_values.max(axis=0)
+        print(value_matrix[0])
         return value_matrix
 
 
-class OptimizedSingleAgent(OptimizedAgent):
-    # def update(self, value_matrix, states, next_states):
-    #     value_matrix = super().update(value_matrix, states, next_states)
-    #     value_matrix = np.minimum(value_matrix, 1)
-    #     values1 = value_matrix[range(self.n_states), states]
-    #     values2 = value_matrix[[0] * self.n_states, self.goal_ids]
-    #     product_values = np.zeros((self.n_states + 1, self.n_states))
-    #     product_values[range(self.n_states), states] = values1 * values2
-    #     product_values[self.n_states] = value_matrix[0]
-    #     value_matrix[0] = product_values.sum(axis=0)
-    #     return value_matrix
-
+class SingleAgent(Agent):
     def step(self, states, value_matrix, done):
         step_result = super().step(states, value_matrix, done)
         next_states, done = step_result[1], step_result[4]
-        fix_next_state(next_states, done)
-        assert np.array_equal(states[done], step_result[1][done])
+        next_states[np.logical_not(done)] = next_states[0]
+        assert np.array_equal(states[done], next_states[done])
         return step_result
 
     def reset(self):
         return np.random.choice(self.n_states) * np.ones(self.n_agents,
                                                          dtype=int)
+
+
+class OptimizedSingleAgent(SingleAgent, OptimizedAgent):
+    pass
 
 
 def init():

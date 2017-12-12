@@ -72,7 +72,7 @@ def updatefig(ax, agent, speed):
 
 
 
-        time.sleep(.5)
+        # time.sleep(.5)
 
 
 def identity(x):
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     # rewards[[0, -1]] = [.001, .999]
     rewards[np.random.choice(n_states)] = 1
     agent1 = algorithm.OptimizedSingleAgent(
-        gamma=.95,
+        gamma=.5,
         alpha=.9,
         n_states=n_states,
         n_actions=2,
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     fig, (ax1, ax2) = plt.subplots(2)
     ax1.set_title('Optimized Agent')
     ax2.set_title('Baseline Agent')
-    speed = 1 / 20
+    speed = 1 / 4
 
 
     def animate():

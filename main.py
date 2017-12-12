@@ -19,7 +19,10 @@ def circle_color(i, terminal):
         return 'gray'
 
 
-def updatefig(ax, agent, states, speed):
+def updatefig(ax, agent, speed):
+    ax.axis('off')
+    ax.set_ylim([-1, agent.n_agents])
+    states = agent.reset()
     assert states.shape == (agent.n_agents,), \
         (states.shape, agent.n_agents)
     im = ax.imshow(agent.value_matrix, vmin=0, vmax=1,
@@ -49,8 +52,8 @@ def updatefig(ax, agent, states, speed):
         for timestep in range(agent.max_timesteps):
             avg_reward = round(total_reward / float(episode), ndigits=2)
             timestep_text.set_text(
-                'timestep: {}, avg. reward: {}'.format(
-                    timestep, avg_reward))
+                'timestep: {}, reward: {}'.format(
+                    timestep, total_reward))
             im.set_array(agent.value_matrix)
             for i, (state, terminal, circle) in enumerate(zip(states, agent.terminal, circles)):
                 circle.set_facecolor(circle_color(i, state == terminal))
@@ -121,14 +124,10 @@ if __name__ == '__main__':
 
 
     def animate():
-        ax1.axis('off')
-        ax1.set_ylim([-1, agent1.n_agents])
-        states = agent1.reset()
-        states2 = agent2.reset()
+        artists1 = updatefig(ax1, agent1, speed)
+        artists2 = updatefig(ax2, agent2, speed)
         while True:
-            l1 = next(updatefig(ax1, agent1, states, speed))
-            l2 = next(updatefig(ax2, agent2, states2, speed))
-            yield l1 + l2
+            yield next(artists1) + next(artists2)
 
     a1 = animation.FuncAnimation(fig, identity, animate,
                                  interval=1, blit=True)

@@ -5,14 +5,23 @@ import itertools
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import animation
-from scipy.ndimage import gaussian_filter
 
 import algorithm
+from algorithm import stochastic_stepwise_transitions
+
+
+def circle_color(i, terminal):
+    if terminal:
+        return 'white'
+    elif i == 0:
+        return 'black'
+    else:
+        return 'gray'
 
 
 def updatefig(ax, agent, states, speed):
-    assert states.shape == (agent.n_agent,), \
-        (states.shape, agent.n_agent)
+    assert states.shape == (agent.n_agents,), \
+        (states.shape, agent.n_agents)
     im = ax.imshow(agent.value_matrix, vmin=0, vmax=1,
                    cmap='Oranges', animated=True)
     im.set_zorder(0)
@@ -23,13 +32,12 @@ def updatefig(ax, agent, states, speed):
 
     circles = []
     texts = []
-    for i in range(agent.n_agent):
+    for i in range(agent.n_agents):
         for j in range(agent.n_states):
             texts.append(ax.text(j, i, int(round(agent.rewards[i, j])),
                                  zorder=2))
         y = agent.n_states - i - 1
-        color = 'gray' if i == 0 else 'lightgray'
-        circle = plt.Circle((states[i], y), radius=0.2, facecolor=color,
+        circle = plt.Circle((states[i], y), radius=0.2,
                             zorder=1, edgecolor='white')
         circles.append(circle)
         ax.add_patch(circle)
@@ -44,9 +52,16 @@ def updatefig(ax, agent, states, speed):
                 'timestep: {}, avg. reward: {}'.format(
                     timestep, avg_reward))
             im.set_array(agent.value_matrix)
+            for i, (state, terminal, circle) in enumerate(zip(states, agent.terminal, circles)):
+                circle.set_facecolor(circle_color(i, state == terminal))
+
             actions, next_states, reward = agent.step(states)
+            terminal = states == agent.terminal
+
             total_reward += reward[0]
             step_size = (next_states - states) * speed
+            assert np.all(step_size[terminal] == 0)
+
             states = next_states
             while not np.allclose(pos, next_states):
                 pos += step_size
@@ -54,25 +69,6 @@ def updatefig(ax, agent, states, speed):
                     circles[i].center = (j, i)
                 yield [im, timestep_text] + texts + circles
         time.sleep(.5)
-
-
-def stochastic_stepwise_transitions(sigma, n_states):
-    transitions = np.stack([
-        np.eye(n_states)[:, np.roll(np.arange(n_states), shift)]
-        for shift in [-1, 1]])  # shifted and blurred I matrices
-    transitions[[0, 1], [0, n_states - 1], [n_states - 1, 0]] = 0
-    transitions[[0, 1], [0, n_states - 1], [0, n_states - 1]] = 1
-    return gaussian_filter(transitions, sigma)
-
-
-def combination_lock_transitions(sigma, n_states):
-    left = np.zeros((n_states, n_states))
-    left[:, 0] = 1
-    transitions = np.stack([
-        left,
-        np.eye(n_states)[:, np.roll(np.arange(n_states), 1)]
-    ])
-    return gaussian_filter(transitions, sigma)
 
 
 def identity(x):
@@ -88,49 +84,49 @@ if __name__ == '__main__':
     rewards[np.random.choice(n_states)] = 1
     agent1 = algorithm.OptimizedSingleAgent(
         gamma=.95,
-        alpha=.95,
+        alpha=.5,
         n_states=n_states,
         n_actions=2,
         transitions=transitions,
-        max_timesteps=n_states,
-        # n_agent=n_agent,
+        max_timesteps=15,
+        # n_agents=n_agents,
         rewards=rewards,
     )
 
-    # agent2 = algorithm.Agent(
-    #     gamma=.95,
-    #     alpha=.95,
-    #     n_states=n_states,
-    #     n_agent=1,
-    #     n_actions=2,
-    #     transitions=transitions,
-    #     max_timesteps=n_states,
-    #     rewards=agent1.rewards,
-    # )
-    agent2 = algorithm.OptimizedAgent(
+    agent2 = algorithm.Agent(
         gamma=.95,
         alpha=.95,
         n_states=n_states,
+        n_agents=1,
         n_actions=2,
         transitions=transitions,
         max_timesteps=n_states,
-        # n_agent=n_agent,
-        rewards=agent1.rewards,
+        rewards=agent1.rewards[[0]],
+        terminal=agent1.rewards[[0]].argmax(axis=1),
     )
+    # agent2 = algorithm.OptimizedAgent( gamma=.95,
+    #     alpha=.95,
+    #     n_states=n_states,
+    #     n_actions=2,
+    #     transitions=transitions,
+    #     max_timesteps=15,
+    #     # n_agents=n_agents,
+    #     rewards=agent1.rewards[0],
+    # )
 
     fig, (ax1, ax2) = plt.subplots(2)
     ax1.set_title('Optimized Agent')
     ax2.set_title('Baseline Agent')
-    speed = 1 / 4
+    speed = 1 / 20
 
 
     def animate(ax, agent):
         ax.axis('off')
-        ax.set_ylim([-1, agent.n_agent])
+        ax.set_ylim([-1, agent.n_agents])
         states = agent.reset()
         frames = partial(updatefig, ax, agent, states, speed)
         return animation.FuncAnimation(fig, identity, frames,
-                                       interval=.1, blit=True)
+                                       interval=.01, blit=True)
 
 
     a1 = animate(ax1, agent1)

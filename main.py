@@ -142,6 +142,5 @@ if __name__ == '__main__':
 
     a1 = animation.FuncAnimation(fig, identity, animate,
                                  interval=1, blit=True)
-    # a2 = animate(ax2, agent2)
 
     plt.show()

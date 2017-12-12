@@ -153,21 +153,22 @@ class OptimizedAgent(Agent):
                          n_states=n_states, n_agents=n_states + 1, **kwargs)
 
     def update(self, value_matrix, states, next_states, nonterminal):
-        assert self.goal_ids.shape == (self.n_agents - 1,)
-
         value_matrix = super().update(value_matrix, states, next_states,
                                       nonterminal)
-        return self.apply_triangle_inequality(states, value_matrix)
+        product_values = np.expand_dims(value_matrix, 2) * np.expand_dims(value_matrix[1:], 0)
+        all_values = np.concatenate([np.expand_dims(value_matrix, 1), product_values], axis=1)
+        # input(all_values)
+        return np.max(all_values, axis=1)
 
-    def apply_triangle_inequality(self, states, value_matrix):
-        indexes = range(1, self.n_agents), states[1:]
-        values1 = value_matrix[indexes]  # V_g'(s)
-        values2 = value_matrix[0, self.goal_ids]  # V_g(g')
-        product_values = np.ones_like(value_matrix) * -np.inf
-        product_values[indexes] = values1 * values2  # V_g'(s) * V_g(g')
-        product_values[0] = value_matrix[0]
-        value_matrix[0] = product_values.max(axis=0)
-        return value_matrix
+        # assert self.goal_ids.shape == (self.n_agents - 1,)
+        # indexes = range(1, self.n_agents), states[1:]
+        # values1 = value_matrix[indexes]  # V_g'(s)
+        # values2 = value_matrix[0, self.goal_ids]  # V_g(g')
+        # product_values = np.ones_like(value_matrix) * -np.inf
+        # product_values[indexes] = values1 * values2  # V_g'(s) * V_g(g')
+        # product_values[0] = value_matrix[0]
+        # value_matrix[0] = product_values.max(axis=0)
+        # return value_matrix
 
 
 class SingleAgent(Agent):

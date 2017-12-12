@@ -22,9 +22,6 @@ def circle_color(i, terminal):
 def updatefig(ax, agent, speed):
     ax.axis('off')
     ax.set_ylim([-1, agent.n_agents])
-    states = agent.reset()
-    assert states.shape == (agent.n_agents,), \
-        (states.shape, agent.n_agents)
     im = ax.imshow(agent.value_matrix, vmin=0, vmax=1,
                    cmap='Oranges', animated=True)
     im.set_zorder(0)
@@ -39,8 +36,7 @@ def updatefig(ax, agent, speed):
         for j in range(agent.n_states):
             texts.append(ax.text(j, i, int(round(agent.rewards[i, j])),
                                  zorder=2))
-        y = agent.n_states - i - 1
-        circle = plt.Circle((states[i], y), radius=0.2,
+        circle = plt.Circle([0, 0], radius=0.2,
                             zorder=1, edgecolor='white')
         circles.append(circle)
         ax.add_patch(circle)
@@ -48,6 +44,7 @@ def updatefig(ax, agent, speed):
     total_reward = 0
     for episode in itertools.count(1):
         states = agent.reset()
+        done = np.zeros_like(states, dtype=bool)
         pos = states.astype(float)
         for timestep in range(agent.max_timesteps):
             avg_reward = round(total_reward / float(episode), ndigits=2)
@@ -58,12 +55,11 @@ def updatefig(ax, agent, speed):
             for i, (state, terminal, circle) in enumerate(zip(states, agent.terminal, circles)):
                 circle.set_facecolor(circle_color(i, state == terminal))
 
-            actions, next_states, reward = agent.step(states)
-            terminal = states == agent.terminal
+            actions, next_states, reward, done = agent.step(states, done)
 
             total_reward += reward[0]
             step_size = (next_states - states) * speed
-            assert np.all(step_size[terminal] == 0)
+            assert np.all(step_size[done] == 0)
 
             states = next_states
             while not np.allclose(pos, next_states):
@@ -125,9 +121,9 @@ if __name__ == '__main__':
 
     def animate():
         artists1 = updatefig(ax1, agent1, speed)
-        artists2 = updatefig(ax2, agent2, speed)
+        # artists2 = updatefig(ax2, agent2, speed)
         while True:
-            yield next(artists1) + next(artists2)
+            yield next(artists1)  #+ next(artists2)
 
     a1 = animation.FuncAnimation(fig, identity, animate,
                                  interval=1, blit=True)

@@ -79,13 +79,13 @@ class Agent:
 
         return next_states, rewards
 
-    def update(self, value_matrix, states, next_states):
+    def update(self, value_matrix, states, next_states, done):
         n_agents, = states.shape
         assert value_matrix.shape == (n_agents, self.n_states)
         assert next_states.shape == (n_agents,)
         assert self.terminal.shape == (n_agents, )
 
-        nonterminal = states != self.terminal
+        nonterminal = np.logical_not(done)
         indexes = np.arange(n_agents)[nonterminal], states[nonterminal]
 
         rewards = self.rewards[indexes]
@@ -98,26 +98,26 @@ class Agent:
         value_matrix[indexes] += (1 - self.alpha) * (rewards + next_values)
         return value_matrix
 
-    def step(self, states):
+    def step(self, states, done):
         actions = self.act(states, self.value_matrix)
         next_states, reward = self.step_sim(actions, states)
-        self.value_matrix = self.update(self.value_matrix, states, next_states)
-
-        terminal = self.terminal == states
-        assert np.array_equal(states[terminal], next_states[terminal])
-        return actions, next_states, reward
+        self.value_matrix = self.update(self.value_matrix, states, next_states, done)
+        assert np.array_equal(states[done], next_states[done])
+        done = next_states == self.terminal
+        return actions, next_states, reward, done
 
 
 class SingleAgent(Agent):
-    def step(self, states):
+    def step(self, states, done):
         actions = self.act(states, self.value_matrix)
         next_states, reward = self.step_sim(actions, states)
         next_states[states != self.terminal] = next_states[0]
-        self.value_matrix = self.update(self.value_matrix, states, next_states)
+        self.value_matrix = self.update(self.value_matrix, states, next_states, done)
 
         terminal = self.terminal == states
         assert np.array_equal(states[terminal], next_states[terminal])
-        return actions, next_states, reward
+        done = next_states == self.terminal
+        return actions, next_states, reward, done
 
     def reset(self):
         return np.random.choice(self.n_states) * np.ones(self.n_agents, dtype=int)
@@ -152,10 +152,10 @@ class OptimizedAgent(Agent):
         super().__init__(rewards=rewards, terminal=terminal,
                          n_states=n_states, n_agents=n_states + 1, **kwargs)
 
-    def update(self, value_matrix, states, next_states):
+    def update(self, value_matrix, states, next_states, nonterminal):
         assert self.goal_ids.shape == (self.n_agents - 1,)
 
-        value_matrix = super().update(value_matrix, states, next_states)
+        value_matrix = super().update(value_matrix, states, next_states, nonterminal)
         value_matrix = np.minimum(value_matrix, 1)  # TODO: delete
         values1 = value_matrix[range(1, self.n_agents), states[1:]]  # V_g'(s)
         values2 = value_matrix[0, self.goal_ids]  # V_g(g')
@@ -178,15 +178,16 @@ class OptimizedSingleAgent(OptimizedAgent):
     #     value_matrix[0] = product_values.sum(axis=0)
     #     return value_matrix
 
-    def step(self, states):
+    def step(self, states, done):
         actions = self.act(states, self.value_matrix)
         next_states, reward = self.step_sim(actions, states)
         terminal = self.terminal == states
         next_states[np.logical_not(terminal)] = next_states[0]
-        self.value_matrix = self.update(self.value_matrix, states, next_states)
+        self.value_matrix = self.update(self.value_matrix, states, next_states, done)
 
         assert np.array_equal(states[terminal], next_states[terminal])
-        return actions, next_states, reward
+        done = next_states == self.terminal
+        return actions, next_states, reward, done
 
     def reset(self):
         return np.random.choice(self.n_states) * np.ones(self.n_agents,

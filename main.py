@@ -49,7 +49,7 @@ def updatefig(ax, agent, speed):
         for timestep in range(agent.max_timesteps):
 
             step_result = agent.step(states, value_matrix, done)
-            actions, next_states, reward, _value_matrix, done = step_result
+            actions, next_states, reward, value_matrix, done = step_result
             assert np.array_equal(states[done], next_states[done])
 
             if not done[0]:
@@ -57,31 +57,27 @@ def updatefig(ax, agent, speed):
             step_size = (next_states - states) * speed
             assert np.all(step_size[done] == 0)
 
-            yield from update_artists(agent, circles, episode, im, next_states, pos, states, step_size, texts, timestep,
-                                      timestep_text, total_reward, value_matrix)
+            avg_reward = round(total_reward / float(episode), ndigits=2)
+            timestep_text.set_text(
+                'timestep: {}, reward: {}'.format(
+                    timestep, total_reward))
+            im.set_array(value_matrix)
+            for i, (state, terminal, circle) in enumerate(zip(states, agent.terminal, circles)):
+                circle.set_facecolor(circle_color(i, state == terminal))
+            while not np.allclose(pos, next_states):
+                pos += step_size
+                for i, j in enumerate(pos):
+                    circles[i].center = (j, i)
+                yield [im, timestep_text] + texts + circles
 
             states = next_states
-            value_matrix = _value_matrix
+
             if not done[0]:
                 total_reward += reward[0]
 
         # time.sleep(.5)
 
 
-def update_artists(agent, circles, episode, im, next_states, pos, states, step_size, texts, timestep, timestep_text,
-                   total_reward, value_matrix):
-    avg_reward = round(total_reward / float(episode), ndigits=2)
-    timestep_text.set_text(
-        'timestep: {}, reward: {}'.format(
-            timestep, total_reward))
-    im.set_array(value_matrix)
-    for i, (state, terminal, circle) in enumerate(zip(states, agent.terminal, circles)):
-        circle.set_facecolor(circle_color(i, state == terminal))
-    while not np.allclose(pos, next_states):
-        pos += step_size
-        for i, j in enumerate(pos):
-            circles[i].center = (j, i)
-        yield [im, timestep_text] + texts + circles
 
 
 def identity(x):

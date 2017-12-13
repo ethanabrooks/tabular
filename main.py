@@ -41,6 +41,7 @@ def updatefig(ax, agent, speed):
         ax.add_patch(circle)
 
     total_reward = 0
+    total_advantage = 0
     value_matrix = np.zeros_like(agent.rewards)
     for episode in itertools.count(1):
         states = agent.reset()
@@ -49,7 +50,10 @@ def updatefig(ax, agent, speed):
         for timestep in range(agent.max_timesteps):
 
             step_result = agent.step(states, value_matrix, done)
-            actions, next_states, reward, value_matrix, done = step_result
+            actions, next_states, reward, vm_pre_optimization, done = step_result
+            value_matrix = agent.apply_triangle_inequality(vm_pre_optimization)
+            advantage = np.sum(value_matrix[0] - vm_pre_optimization[0])
+            total_advantage += advantage
             assert np.array_equal(states[done], next_states[done])
 
             if not done[0]:
@@ -57,10 +61,11 @@ def updatefig(ax, agent, speed):
             step_size = (next_states - states) * speed
             assert np.all(step_size[done] == 0)
 
-            avg_reward = round(total_reward / float(episode), ndigits=2)
+            value = np.sum(value_matrix[0])
+            advantage_percent = total_advantage / value * 100
             timestep_text.set_text(
-                'timestep: {}, reward: {}'.format(
-                    timestep, total_reward))
+                'reward: {} optimization: {:.2f}%'.format(
+                    total_reward, advantage_percent))
             im.set_array(value_matrix)
             for i, (state, terminal, circle) in enumerate(zip(states, agent.terminal, circles)):
                 circle.set_facecolor(circle_color(i, state == terminal))
@@ -86,11 +91,13 @@ def identity(x):
 
 if __name__ == '__main__':
     np.set_printoptions(precision=1)
-    n_states = 10
-    transitions = stochastic_stepwise_transitions(sigma=.5, n_states=n_states)
+    n_states = 5
+    # transitions = algorithm.combination_lock_transitions(sigma=.5, n_states=n_states)
+    transitions = algorithm.stochastic_stepwise_transitions(sigma=.5, n_states=n_states)
     rewards = np.zeros(n_states)
+    rewards[0] = 1
     # rewards[[0, -1]] = [.001, .999]
-    rewards[np.random.choice(n_states)] = 1
+    # rewards[np.random.choice(n_states)] = 1
     agent1 = algorithm.OptimizedSingleAgent(
         gamma=.95,
         alpha=.9,
@@ -123,17 +130,18 @@ if __name__ == '__main__':
     #     rewards=agent1.rewards[0],
     # )
 
-    fig, (ax1, ax2) = plt.subplots(2)
+    # fig, (ax1, ax2) = plt.subplots(2)
+    fig, ax1 = plt.subplots(1)
     ax1.set_title('Optimized Agent')
-    ax2.set_title('Baseline Agent')
-    speed = 1 / 4
+    # ax2.set_title('Baseline Agent')
+    speed = 1 / 2
 
 
     def animate():
         artists1 = updatefig(ax1, agent1, speed)
-        artists2 = updatefig(ax2, agent2, speed)
+        # artists2 = updatefig(ax2, agent2, speed)
         while True:
-            yield next(artists1) + next(artists2)
+            yield next(artists1) #+ next(artists2)
 
 
     a1 = animation.FuncAnimation(fig, identity, animate,

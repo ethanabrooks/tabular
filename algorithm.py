@@ -206,26 +206,10 @@ def init():
     return agent, states
 
 
-if __name__ == '__main__':
-    agent1, states1 = init()
-    timestep = 0
-    value_matrix = agent1.rewards
-    done = np.zeros_like(states1)
-    while True:
-        if timestep == agent1.max_timesteps:
-            states1 = agent1.reset()
-            timestep = 0
-        else:
-            _, states1, _, value_matrix, done = agent1.step(states1,
-                                                            value_matrix,
-                                                            done)
-            timestep += 1
-
-
 def stochastic_stepwise_transitions(sigma, n_states):
     transitions = np.stack([
-        np.eye(n_states)[:, np.roll(np.arange(n_states), shift)]
-        for shift in [-1, 1]])  # shifted and blurred I matrices
+                               np.eye(n_states)[:, np.roll(np.arange(n_states), shift)]
+                               for shift in [-1, 1]])  # shifted and blurred I matrices
     transitions[[0, 1], [0, n_states - 1], [n_states - 1, 0]] = 0
     transitions[[0, 1], [0, n_states - 1], [0, n_states - 1]] = 1
     return gaussian_filter(transitions, sigma)
@@ -239,3 +223,39 @@ def combination_lock_transitions(sigma, n_states):
         np.eye(n_states)[:, np.roll(np.arange(n_states), 1)]
     ])
     return gaussian_filter(transitions, sigma)
+
+if __name__ == '__main__':
+    np.set_printoptions(precision=1)
+    n_states = 20
+    transitions = combination_lock_transitions(sigma=.5, n_states=n_states)
+    # transitions = algorithm.stochastic_stepwise_transitions(sigma=.5, n_states=n_states)
+    rewards = np.zeros(n_states)
+    # rewards[0] = 1
+    rewards[[0, -1]] = [.001, .999]
+    # rewards[np.random.choice(n_states)] = 1
+    agent = OptimizedSingleAgent(
+        gamma=.95,
+        alpha=.9,
+        n_states=n_states,
+        n_actions=2,
+        transitions=transitions,
+        max_timesteps=15,
+        # n_agents=n_agents,
+        rewards=rewards,
+    )
+
+    while True:
+        value_matrix = np.zeros_like(agent.rewards)
+        states = agent.reset()
+        done = np.zeros_like(states, dtype=bool)
+        advantage = 0
+        for timestep in range(agent.max_timesteps):
+            step_result = agent.step(states, value_matrix, done)
+            actions, next_states, reward, pre_optimization, done = step_result
+            advantage += np.sum(value_matrix[0] - pre_optimization[0])
+            value = value_matrix.sum()
+            advantage_percent = advantage / float(value) * 100
+            print('\rvalue: {} optimization: {}, percent: {:.2f}%'.format(value, advantage, advantage_percent), end='')
+
+
+

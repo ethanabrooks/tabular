@@ -91,12 +91,12 @@ def identity(x):
 
 if __name__ == '__main__':
     np.set_printoptions(precision=1)
-    n_states = 5
-    # transitions = algorithm.combination_lock_transitions(sigma=.5, n_states=n_states)
-    transitions = algorithm.stochastic_stepwise_transitions(sigma=.5, n_states=n_states)
+    n_states = 20
+    transitions = algorithm.combination_lock_transitions(sigma=.5, n_states=n_states)
+    # transitions = algorithm.stochastic_stepwise_transitions(sigma=.5, n_states=n_states)
     rewards = np.zeros(n_states)
-    rewards[0] = 1
-    # rewards[[0, -1]] = [.001, .999]
+    # rewards[0] = 1
+    rewards[[0, -1]] = [.001, .999]
     # rewards[np.random.choice(n_states)] = 1
     agent1 = algorithm.OptimizedSingleAgent(
         gamma=.95,
